@@ -6,6 +6,7 @@ import RegisterProvider from "./pages/RegisterProvider";
 import NotFound from "./pages/NotFound";
 import RegisterChoice from "./pages/RegisterChoice";
 import NavbarHandler from "./components/NavbarHandler";
+import UserProfile from "./pages/DashboardUser";
 
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
           <Route path="/register" element={<RegisterChoice />} />
           <Route path="/register/user" element={<RegisterUser />} />
           <Route path="/register/provider" element={<RegisterProvider />} />
+          <Route path="/perfil" element={<UserProfile />} /> 
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
