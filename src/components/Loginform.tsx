@@ -65,11 +65,6 @@ function LoginForm() {
         Iniciar Sesión
       </h2>
 
-      {/* Mensaje para el desarrollador sobre las credenciales de prueba */}
-      <p className="text-sm text-center text-gray-500 mb-4 bg-yellow-50 p-2 rounded">
-        Prueba Cliente: **{USER_EMAIL}** / **{USER_PASSWORD}** <br />
-        Prueba Proveedor: **{PROVIDER_EMAIL}** / **{PROVIDER_PASSWORD}**
-      </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* ... (El resto de tu formulario sigue igual) ... */}

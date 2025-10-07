@@ -6,7 +6,7 @@ function NavbarVisitor() {
     const [open, setOpen] = useState(false);
 
     return (
-       
+
         <nav className="bg-blue-900 text-white shadow-lg">
             <div className="max-w-6xl mx-auto flex justify-between items-center p-4">
                 <div className="flex items-center gap-2">
@@ -18,12 +18,7 @@ function NavbarVisitor() {
                     </Link>
                 </div>
 
-                {/* Links: Aumento el gap de 6 a 10 para más separación */}
-                <div className="flex gap-10 items-center relative">
-                    <Link to="/" className="hover:text-yellow-300 transition text-lg"> {/* Añado text-lg para darle un poco más de cuerpo */}
-                        Inicio
-                    </Link>
-
+                <div className="flex items-center gap-6 md:gap-8">
                     <Link to="/login" className="hover:text-yellow-300 transition text-lg">
                         Login
                     </Link>
