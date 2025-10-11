@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { registerUser } from "../services/registerUser";
 
 function RegisterformUser() {
   const [formData, setFormData] = useState({
@@ -13,33 +14,53 @@ function RegisterformUser() {
   });
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    setError(""); // limpiar errores al escribir
+    setError("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validaciones básicas
+
     if (formData.password !== formData.confirmPassword) {
       setError("Las contraseñas no coinciden.");
       return;
     }
+
 
     if (!formData.membership) {
       setError("Debes seleccionar una membresía.");
       return;
     }
 
-    console.log("Datos de registro de usuario:", formData);
-    alert("Registro de usuario completado ✅ (simulado)");
+    setLoading(true);
 
-    // Aquí luego conectarás al backend o AuthContext
+    try {
+      const payload = {
+        name: formData.name,
+        birthdate: formData.birthdate,
+        email: formData.email,
+        password: formData.password,
+        membership: formData.membership
+      };
+      const response = await registerUser(payload);
+      console.log("Registro exitoso:", response);
+
+      alert("Registro de usuario completado ✅");
+
+    } catch (err: any) {
+      setError(err.message || "Error al registrar usuario");
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -122,12 +143,12 @@ function RegisterformUser() {
           <option value="vip">VIP</option>
         </select>
       </div>
-
       <button
         type="submit"
         className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition-colors"
+        disabled={loading}
       >
-        Registrarse
+        {loading ? "Registrando..." : "Registrarse"}
       </button>
     </form>
   )

@@ -1,17 +1,8 @@
 import { useState } from "react";
-// import { login } from "../services/api"; // Descomentarás esto cuando el backend esté listo
+import login from "../services/api"
 import { useAuthContext } from "../contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 
-// --- DATOS SIMULADOS PARA PRUEBAS (DOBLE ROL) ---
-const USER_EMAIL = "user@skillnet.com";       // Credenciales de Usuario
-const USER_PASSWORD = "password";
-const USER_ROLE = "user";
-
-const PROVIDER_EMAIL = "provider@skillnet.com"; // Credenciales de Proveedor
-const PROVIDER_PASSWORD = "password";
-const PROVIDER_ROLE = "provider";
-// ------------------------------------------------
 
 function LoginForm() {
   const { setRole } = useAuthContext();
@@ -24,39 +15,32 @@ function LoginForm() {
     e.preventDefault();
     setError("");
 
-    // *******************************************************************
-    // LÓGICA DE SIMULACIÓN DE ROLES
-    // *******************************************************************
+    try {
 
-    // 1. Simular Login de USUARIO (Cliente)
-    if (email === USER_EMAIL && password === USER_PASSWORD) {
-      setRole(USER_ROLE); // Establece el rol como 'user'
-      navigate("/");
-      return;
-    }
+      const res = await login(email, password);
 
-    // 2. Simular Login de PROVEEDOR
-    if (email === PROVIDER_EMAIL && password === PROVIDER_PASSWORD) {
-      setRole(PROVIDER_ROLE); // Establece el rol como 'provider'
-      navigate("/");
-      return;
-    }
+      if (res.success) {
 
-    // *******************************************************************
-    // LÓGICA DE BACKEND REAL (MANTENIDA EN CASO DE NECESITARLA MÁS TARDE)
-    // *******************************************************************
-    /*
-        const res = await login(email, password); 
-        if (res.success) {
+
+        if (res.role) {
           setRole(res.role);
-          navigate("/");
-        } else {
-          setError("Credenciales inválidas. Intenta nuevamente.");
-        }
-        */
 
-    // Si no coincide con ninguna simulación, muestra el error de credenciales.
-    setError("Credenciales inválidas. Intenta nuevamente.");
+          if (res.role === 'provider') {
+            navigate("/dashboard/proveedor");
+          } else {
+            navigate("/dashboard/user");
+          }
+        } else {
+         
+          setError("Login exitoso, pero el servidor no devolvió el rol de usuario.");
+        }
+      }
+
+    } catch (err) {
+
+      setError("Error de conexión con el servidor. Inténtalo más tarde.");
+      console.error("Login fatal error:", err);
+    }
   };
 
   return (
