@@ -7,6 +7,7 @@ import NotFound from "./pages/NotFound";
 import RegisterChoice from "./pages/RegisterChoice";
 import NavbarHandler from "./components/NavbarHandler";
 import UserProfile from "./pages/DashboardUser";
+import AuthCallback from "./pages/AuthCallback";
 
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
           <Route path="/register" element={<RegisterChoice />} />
           <Route path="/register/user" element={<RegisterUser />} />
           <Route path="/register/provider" element={<RegisterProvider />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/perfil" element={<UserProfile />} /> 
           <Route path="*" element={<NotFound />} />
         </Routes>

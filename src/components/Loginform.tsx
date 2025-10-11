@@ -1,17 +1,9 @@
 import { useState } from "react";
-// import { login } from "../services/api"; // Descomentarás esto cuando el backend esté listo
+import { login } from "../services/auth";
 import { useAuthContext } from "../contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
+import { auth0RegisterUrl } from "../services/auth";
 
-// --- DATOS SIMULADOS PARA PRUEBAS (DOBLE ROL) ---
-const USER_EMAIL = "user@skillnet.com";       // Credenciales de Usuario
-const USER_PASSWORD = "password";
-const USER_ROLE = "user";
-
-const PROVIDER_EMAIL = "provider@skillnet.com"; // Credenciales de Proveedor
-const PROVIDER_PASSWORD = "password";
-const PROVIDER_ROLE = "provider";
-// ------------------------------------------------
 
 function LoginForm() {
   const { setRole } = useAuthContext();
@@ -24,39 +16,17 @@ function LoginForm() {
     e.preventDefault();
     setError("");
 
-    // *******************************************************************
-    // LÓGICA DE SIMULACIÓN DE ROLES
-    // *******************************************************************
-
-    // 1. Simular Login de USUARIO (Cliente)
-    if (email === USER_EMAIL && password === USER_PASSWORD) {
-      setRole(USER_ROLE); // Establece el rol como 'user'
-      navigate("/");
-      return;
+    try {
+      const res = await login(email, password);
+      if (res.success) {
+        setRole(res.role);
+        navigate("/");
+      } else {
+        setError("Credenciales inválidas. Intenta nuevamente.");
+      }
+    } catch {
+      setError("Error al conectar con el servidor. Intenta nuevamente.");
     }
-
-    // 2. Simular Login de PROVEEDOR
-    if (email === PROVIDER_EMAIL && password === PROVIDER_PASSWORD) {
-      setRole(PROVIDER_ROLE); // Establece el rol como 'provider'
-      navigate("/");
-      return;
-    }
-
-    // *******************************************************************
-    // LÓGICA DE BACKEND REAL (MANTENIDA EN CASO DE NECESITARLA MÁS TARDE)
-    // *******************************************************************
-    /*
-        const res = await login(email, password); 
-        if (res.success) {
-          setRole(res.role);
-          navigate("/");
-        } else {
-          setError("Credenciales inválidas. Intenta nuevamente.");
-        }
-        */
-
-    // Si no coincide con ninguna simulación, muestra el error de credenciales.
-    setError("Credenciales inválidas. Intenta nuevamente.");
   };
 
   return (
@@ -113,6 +83,23 @@ function LoginForm() {
         >
           Entrar
         </button>
+
+        <div className="grid grid-cols-2 gap-2">
+          <a
+            href={auth0RegisterUrl('client','google-oauth2')}
+            className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
+          >
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+            <span>Google</span>
+          </a>
+          <a
+            href={auth0RegisterUrl('client','github')}
+            className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
+          >
+            <img src="https://www.svgrepo.com/show/512317/github-142.svg" alt="GitHub" className="w-5 h-5" />
+            <span>GitHub</span>
+          </a>
+        </div>
 
         <p className="text-center text-sm text-gray-500 mt-4">
           ¿No tienes cuenta?{" "}
