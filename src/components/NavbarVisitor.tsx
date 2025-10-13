@@ -36,7 +36,7 @@ function NavbarVisitor() {
                         {open && (
                             <div className="absolute right-0 mt-2 w-48 bg-white border border-blue-100 rounded-xl shadow-lg overflow-hidden animate-fadeIn z-10">
                                 <Link
-                                    to="/register/user"
+                                    to="/register/client"
                                     className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
                                 >
                                     Como Usuario

@@ -15,6 +15,7 @@ function RegisterformUser() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
 
   const handleChange = (
@@ -23,41 +24,82 @@ function RegisterformUser() {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     setError("");
+    setSuccess(false);
   };
 
+  const validateForm = () => {
+    const { name, birthdate, email, password, confirmPassword, membership } = formData;
+
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden.");
+      return false;
+    }
+
+    if (!membership) {
+      setError("Debes seleccionar una membresía.");
+      return false;
+    }
+
+    if (!/^[a-zA-Z\s]+$/.test(name) || name.trim().length < 3) {
+      setError("El nombre debe contener solo letras y tener al menos 3 caracteres.");
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Por favor, introduce un formato de correo electrónico válido.");
+      return false;
+    }
+
+    const birthDateObj = new Date(birthdate);
+    const today = new Date();
+
+    const ageLimit = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+
+    if (birthDateObj >= ageLimit) {
+      setError("Debes tener al menos 18 años para registrarte.");
+      return false;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      setError("La contraseña debe tener: Mín. 8 caracteres, al menos 1 mayúscula, 1 número y 1 símbolo (@$!%*?&).");
+      return false;
+    }
+
+    setError("");
+    return true;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSuccess(false);
 
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Las contraseñas no coinciden.");
-      return;
-    }
-
-
-    if (!formData.membership) {
-      setError("Debes seleccionar una membresía.");
+    if (!validateForm()) {
       return;
     }
 
     setLoading(true);
 
     try {
-      const payload = {
-        name: formData.name,
-        birthdate: formData.birthdate,
-        email: formData.email,
-        password: formData.password,
-        membership: formData.membership
-      };
-      const response = await registerUser(payload);
-      console.log("Registro exitoso:", response);
+      const { confirmPassword, ...payload } = formData;
 
-      alert("Registro de usuario completado ✅");
+      const response = await registerUser(payload);
+
+      console.log("Registro exitoso", response);
+      setSuccess(true);
+
+      setFormData({
+        name: "",
+        birthdate: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        membership: "",
+      });
 
     } catch (err: any) {
-      setError(err.message || "Error al registrar usuario");
+      setError(err.message || "Error al registrar usuario. Intenta de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -77,6 +119,13 @@ function RegisterformUser() {
       {error && (
         <p className="text-red-500 text-sm text-center font-medium">
           {error}
+        </p>
+
+      )}
+
+      {success && (
+        <p className="text-green-500 text-sm text-center font-medium">
+          Registro exitoso 🎉
         </p>
       )}
 

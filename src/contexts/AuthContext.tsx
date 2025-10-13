@@ -3,7 +3,7 @@
 import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 
-type Role = "visitor" | "user" | "provider";
+type Role = "visitor" | "client" | "provider";
 
 interface AuthContextType {
     role: Role;
@@ -20,7 +20,7 @@ export function AuthProvider ({ children }: {children: ReactNode}) {
     const logout = () => {
         setRole("visitor");
     }
-
+    
     return (
             <AuthContext.Provider value={{ role, setRole, logout }}>
       {children}
