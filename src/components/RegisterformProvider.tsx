@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState } from "react"
+import { registerProvider } from "../services/providers"
+import { auth0RegisterUrl } from "../services/auth"
 
 function RegisterformProvider() {
 
@@ -27,10 +29,14 @@ function RegisterformProvider() {
         setError("");
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
 
+        if (formData.password.length < 6) {
+            setError("La contraseña debe tener al menos 6 caracteres.");
+            return;
+        }
         if (formData.password !== formData.confirmPassword) {
             setError("Las contraseñas no coinciden.");
             return;
@@ -41,8 +47,20 @@ function RegisterformProvider() {
             return;
         }
 
-        console.log("Datos de registro de proveedor:", formData);
-        alert("Registro de proveedor completado ✅ (simulado)");
+        try {
+            const res = await registerProvider({
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                birthDate: formData.birthdate,
+                serviceType: formData.serviceType,
+                about: formData.about,
+            });
+            localStorage.setItem("accessToken", res.accessToken);
+            alert("Registro de proveedor completado ✅");
+        } catch (err: any) {
+            setError(err?.message || "Error registrando proveedor");
+        }
 
     };
 
@@ -139,6 +157,23 @@ function RegisterformProvider() {
             >
                 Registrarse como Proveedor
             </button>
+
+            <div className="pt-2 grid grid-cols-2 gap-2">
+                <a
+                    href={auth0RegisterUrl('provider','google-oauth2')}
+                    className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
+                >
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+                    <span>Continuar con Google</span>
+                </a>
+                <a
+                    href={auth0RegisterUrl('provider','github')}
+                    className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
+                >
+                    <img src="https://www.svgrepo.com/show/512317/github-142.svg" alt="GitHub" className="w-5 h-5" />
+                    <span>Continuar con GitHub</span>
+                </a>
+            </div>
         </form>
     );
 }

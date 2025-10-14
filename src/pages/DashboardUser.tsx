@@ -1,19 +1,15 @@
 import { FaEdit, FaEnvelope, FaUser, FaCamera, FaClipboardList } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import { useAuthContext } from "../contexts/AuthContext";
 
 function UserProfile() {
-    // Datos simulados (Simplificados: eliminamos el 'status')
+    const { user } = useAuthContext();
     const userData = {
-        name: 'Ana',
-        lastName: 'Gómez',
-        email: 'ana.gomez@mail.com',
-        profilePicture: 'https://via.placeholder.com/150/0000FF/FFFFFF?text=AG',
-        requests: [
-            { id: 1, service: 'Plomería de emergencia', date: '2025-09-15' },
-            { id: 2, service: 'Instalación eléctrica', date: '2025-10-01' },
-            { id: 3, service: 'Mantenimiento de jardín', date: '2025-10-05' },
-        ],
-    };
+        name: user?.name ?? '',
+        email: user?.email ?? '',
+        profilePicture: user?.imgProfile || 'https://via.placeholder.com/150/0000FF/FFFFFF?text=AG',
+        requests: [],
+    } as any;
 
     return (
         <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
