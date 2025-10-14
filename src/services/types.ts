@@ -14,8 +14,8 @@ export interface AuthResponse {
   accessToken: string;
 }
 
-export function toFrontendRole(backendRole: BackendRole): "user" | "provider" {
-  return backendRole === "provider" ? "provider" : "user";
+export function toFrontendRole(backendRole: BackendRole): "client" | "provider" {
+  return backendRole === "provider" ? "provider" : "client";
 }
 
 

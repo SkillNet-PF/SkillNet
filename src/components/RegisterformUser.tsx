@@ -7,11 +7,13 @@ import { auth0RegisterUrl } from "../services/auth";
 function RegisterformUser() {
   const [formData, setFormData] = useState({
     name: "",
-    birthdate: "",
+    birthDate: "",
     email: "",
     password: "",
     confirmPassword: "",
-    membership: "",
+    address: "",
+    phone: "",
+    //subscription: "",
   });
 
   const [error, setError] = useState("");
@@ -37,8 +39,13 @@ function RegisterformUser() {
       return;
     }
 
-    if (!formData.membership) {
-      setError("Debes seleccionar una membresía.");
+    //if (!formData.subscription) {
+      //setError("Debes seleccionar una membresía.");
+      //return;
+    //}
+
+    if (!formData.phone.match(/^\+?\d{7,15}$/)) {
+      setError("Por favor ingresa un número de teléfono válido.");
       return;
     }
 
@@ -47,9 +54,13 @@ function RegisterformUser() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        birthDate: formData.birthdate,
-        membership: formData.membership,
+        address: formData.address,
+        phone: formData.phone,
+        birthDate: formData.birthDate,
+        //subscription: formData.subscription as "basic" | "standard" | "premium",
+        rol: "client",
       });
+
       localStorage.setItem("accessToken", res.accessToken);
       alert("Registro de usuario completado ✅");
     } catch (err: any) {
@@ -69,9 +80,7 @@ function RegisterformUser() {
       </h2>
 
       {error && (
-        <p className="text-red-500 text-sm text-center font-medium">
-          {error}
-        </p>
+        <p className="text-red-500 text-sm text-center font-medium">{error}</p>
       )}
 
       <div className="space-y-3">
@@ -87,8 +96,8 @@ function RegisterformUser() {
 
         <input
           type="date"
-          name="birthdate"
-          value={formData.birthdate}
+          name="birthDate"
+          value={formData.birthDate}
           onChange={handleChange}
           className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
           required
@@ -124,17 +133,37 @@ function RegisterformUser() {
           required
         />
 
-        <select
-          name="membership"
-          value={formData.membership}
+        <input
+          type="text"
+          name="address"
+          placeholder="Dirección"
+          value={formData.address}
           onChange={handleChange}
           className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
           required
+        />
+
+        <input
+          type="text"
+          name="phone"
+          placeholder="Teléfono"
+          value={formData.phone}
+          onChange={handleChange}
+          className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          required
+        />
+
+        <select
+        //  name="subscription"
+          //value={formData.subscription}
+          //onChange={handleChange}
+          //className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          //required
         >
-          <option value="">Selecciona una membresía</option>
-          <option value="basic">Básica</option>
+          <option value="">Selecciona un plan</option>
+          <option value="basic">Básico</option>
+          <option value="standard">Estándar</option>
           <option value="premium">Premium</option>
-          <option value="vip">VIP</option>
         </select>
       </div>
 
@@ -147,21 +176,30 @@ function RegisterformUser() {
 
       <div className="pt-2 grid grid-cols-2 gap-2">
         <a
-          href={auth0RegisterUrl('client','google-oauth2')}
+          href={auth0RegisterUrl("client", "google-oauth2")}
           className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
         >
-          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+          <img
+            src="https://www.svgrepo.com/show/475656/google-color.svg"
+            alt="Google"
+            className="w-5 h-5"
+          />
           <span>Continuar con Google</span>
         </a>
         <a
-          href={auth0RegisterUrl('client','github')}
+          href={auth0RegisterUrl("client", "github")}
           className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
         >
-          <img src="https://www.svgrepo.com/show/512317/github-142.svg" alt="GitHub" className="w-5 h-5" />
+          <img
+            src="https://www.svgrepo.com/show/512317/github-142.svg"
+            alt="GitHub"
+            className="w-5 h-5"
+          />
           <span>Continuar con GitHub</span>
         </a>
       </div>
     </form>
+
   )
 }
 

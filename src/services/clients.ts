@@ -5,12 +5,20 @@ export async function registerUser(payload: {
   name: string;
   email: string;
   password: string;
-  birthDate?: string;
-  membership?: string;
+  address:string;
+  phone: string;
+  rol?: "client" | "provider";
+  birthDate: string;
+  //subscription: "basic" | "standard" | "premium";
+  imgProfile?: string; 
 }): Promise<AuthResponse> {
-  return await http<AuthResponse>("/clients/register", {
+  return await http<AuthResponse>("/auth/register", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      ...payload,
+      rol: payload.rol || "client",
+      isActive: true,
+    }),
   });
 }
 
