@@ -3,13 +3,14 @@ import { login } from "../services/auth";
 import { useAuthContext } from "../contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { auth0RegisterUrl } from "../services/auth";
-
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function LoginForm() {
   const { setRole } = useAuthContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,7 +20,7 @@ function LoginForm() {
     try {
       const res = await login(email, password);
       if (res.success) {
-        setRole(res.role);
+        setRole(res.role === "client" ? "user" : res.role);
         navigate("/");
       } else {
         setError("Credenciales inválidas. Intenta nuevamente.");
@@ -35,13 +36,15 @@ function LoginForm() {
         Iniciar Sesión
       </h2>
 
-
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* ... (El resto de tu formulario sigue igual) ... */}
 
         {/* Input Correo electrónico */}
         <div>
-          <label htmlFor="email" className="block text-gray-700 text-sm font-medium mb-1">
+          <label
+            htmlFor="email"
+            className="block text-gray-700 text-sm font-medium mb-1"
+          >
             Correo electrónico
           </label>
           <input
@@ -57,18 +60,31 @@ function LoginForm() {
 
         {/* Input Contraseña */}
         <div>
-          <label htmlFor="password" className="block text-gray-700 text-sm font-medium mb-1">
+          <label
+            htmlFor="password"
+            className="block text-gray-700 text-sm font-medium mb-1"
+          >
             Contraseña
           </label>
-          <input
-            type="password"
-            id="password"
-            placeholder="********"
-            className="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              placeholder="********"
+              className="w-full border border-gray-300 p-2 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+              title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            >
+              {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -86,17 +102,25 @@ function LoginForm() {
 
         <div className="grid grid-cols-2 gap-2">
           <a
-            href={auth0RegisterUrl('client','google-oauth2')}
+            href={auth0RegisterUrl("client", "google-oauth2")}
             className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
           >
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+            <img
+              src="https://www.svgrepo.com/show/475656/google-color.svg"
+              alt="Google"
+              className="w-5 h-5"
+            />
             <span>Google</span>
           </a>
           <a
-            href={auth0RegisterUrl('client','github')}
+            href={auth0RegisterUrl("client", "github")}
             className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
           >
-            <img src="https://www.svgrepo.com/show/512317/github-142.svg" alt="GitHub" className="w-5 h-5" />
+            <img
+              src="https://www.svgrepo.com/show/512317/github-142.svg"
+              alt="GitHub"
+              className="w-5 h-5"
+            />
             <span>GitHub</span>
           </a>
         </div>

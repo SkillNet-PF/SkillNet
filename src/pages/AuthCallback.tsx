@@ -13,18 +13,17 @@ function AuthCallback() {
     const token = params.get("token");
     const role = params.get("role");
     if (token) localStorage.setItem("accessToken", token);
-    if (role === "provider" || role === "client") setRole(role === "provider" ? "provider" : "user");
+    if (role === "provider" || role === "client")
+      setRole(role === "provider" ? "provider" : "user");
 
-    http<{ user: any }>("/auth/me").then((res) => {
-   
-    }).finally(() => {
-      navigate("/", { replace: true });
-    });
+    http<{ user: any }>("/auth/me")
+      .then(() => {})
+      .finally(() => {
+        navigate("/", { replace: true });
+      });
   }, [location.search, navigate, setRole]);
 
   return null;
 }
 
 export default AuthCallback;
-
-

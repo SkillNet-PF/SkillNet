@@ -3,18 +3,24 @@
 import React, { useState } from "react";
 import { registerUser } from "../services/clients";
 import { auth0RegisterUrl } from "../services/auth";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function RegisterformUser() {
   const [formData, setFormData] = useState({
     name: "",
-    birthdate: "",
+    birthDate: "",
     email: "",
     password: "",
     confirmPassword: "",
-    membership: "",
+    address: "",
+    phone: "",
+    subscription: "",
+    paymentMethod: "",
   });
 
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -37,8 +43,18 @@ function RegisterformUser() {
       return;
     }
 
-    if (!formData.membership) {
+    if (!formData.subscription) {
       setError("Debes seleccionar una membresía.");
+      return;
+    }
+
+    if (!formData.paymentMethod) {
+      setError("Debes seleccionar un método de pago.");
+      return;
+    }
+
+    if (!formData.phone.match(/^\+?\d{7,15}$/)) {
+      setError("Por favor ingresa un número de teléfono válido.");
       return;
     }
 
@@ -47,17 +63,21 @@ function RegisterformUser() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        birthDate: formData.birthdate,
-        membership: formData.membership,
+        confirmPassword: formData.confirmPassword,
+        birthDate: formData.birthDate,
+        address: formData.address,
+        phone: formData.phone,
+        rol: "client",
+        paymentMethod: formData.paymentMethod,
+        subscription: formData.subscription,
       });
+
       localStorage.setItem("accessToken", res.accessToken);
       alert("Registro de usuario completado ✅");
     } catch (err: any) {
       setError(err?.message || "Error registrando usuario");
     }
   };
-
-
 
   return (
     <form
@@ -69,9 +89,7 @@ function RegisterformUser() {
       </h2>
 
       {error && (
-        <p className="text-red-500 text-sm text-center font-medium">
-          {error}
-        </p>
+        <p className="text-red-500 text-sm text-center font-medium">{error}</p>
       )}
 
       <div className="space-y-3">
@@ -87,8 +105,8 @@ function RegisterformUser() {
 
         <input
           type="date"
-          name="birthdate"
-          value={formData.birthdate}
+          name="birthDate"
+          value={formData.birthDate}
           onChange={handleChange}
           className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
           required
@@ -104,37 +122,98 @@ function RegisterformUser() {
           required
         />
 
+        {/* Campo de Contraseña */}
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            name="password"
+            placeholder="Contraseña"
+            value={formData.password}
+            onChange={handleChange}
+            className="w-full border border-gray-300 p-2 pr-10 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+            title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+          >
+            {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+          </button>
+        </div>
+
+        {/* Campo de Confirmar Contraseña */}
+        <div className="relative">
+          <input
+            type={showConfirmPassword ? "text" : "password"}
+            name="confirmPassword"
+            placeholder="Confirmar contraseña"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            className="w-full border border-gray-300 p-2 pr-10 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+            title={
+              showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+            }
+          >
+            {showConfirmPassword ? (
+              <FaEyeSlash size={18} />
+            ) : (
+              <FaEye size={18} />
+            )}
+          </button>
+        </div>
+
         <input
-          type="password"
-          name="password"
-          placeholder="Contraseña"
-          value={formData.password}
+          type="text"
+          name="address"
+          placeholder="Dirección"
+          value={formData.address}
           onChange={handleChange}
           className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
           required
         />
 
         <input
-          type="password"
-          name="confirmPassword"
-          placeholder="Confirmar contraseña"
-          value={formData.confirmPassword}
+          type="text"
+          name="phone"
+          placeholder="Teléfono"
+          value={formData.phone}
           onChange={handleChange}
           className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
           required
         />
 
         <select
-          name="membership"
-          value={formData.membership}
+          name="subscription"
+          value={formData.subscription}
           onChange={handleChange}
           className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
           required
         >
-          <option value="">Selecciona una membresía</option>
-          <option value="basic">Básica</option>
+          <option value="">Selecciona un plan</option>
+          <option value="basic">Básico</option>
+          <option value="standard">Estándar</option>
           <option value="premium">Premium</option>
-          <option value="vip">VIP</option>
+        </select>
+
+        <select
+          name="paymentMethod"
+          value={formData.paymentMethod}
+          onChange={handleChange}
+          className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          required
+        >
+          <option value="">Selecciona método de pago</option>
+          <option value="tarjeta_credito">Tarjeta de Crédito</option>
+          <option value="paypal">PayPal</option>
+          <option value="transferencia">Transferencia Bancaria</option>
         </select>
       </div>
 
@@ -147,22 +226,30 @@ function RegisterformUser() {
 
       <div className="pt-2 grid grid-cols-2 gap-2">
         <a
-          href={auth0RegisterUrl('client','google-oauth2')}
+          href={auth0RegisterUrl("client", "google-oauth2")}
           className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
         >
-          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+          <img
+            src="https://www.svgrepo.com/show/475656/google-color.svg"
+            alt="Google"
+            className="w-5 h-5"
+          />
           <span>Continuar con Google</span>
         </a>
         <a
-          href={auth0RegisterUrl('client','github')}
+          href={auth0RegisterUrl("client", "github")}
           className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
         >
-          <img src="https://www.svgrepo.com/show/512317/github-142.svg" alt="GitHub" className="w-5 h-5" />
+          <img
+            src="https://www.svgrepo.com/show/512317/github-142.svg"
+            alt="GitHub"
+            className="w-5 h-5"
+          />
           <span>Continuar con GitHub</span>
         </a>
       </div>
     </form>
-  )
+  );
 }
 
-export default RegisterformUser
+export default RegisterformUser;
