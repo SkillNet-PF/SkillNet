@@ -8,18 +8,6 @@ export interface ServiceProvider {
   name: string;
   birthDate: string;
   email: string;
-<<<<<<< HEAD
-  password: string;
-  confirmPassword: string;
-  birthDate: string;
-  serviceType: string;
-  about: string;
-  days?: string; // CSV: "lunes,martes"
-  horarios?: string; // CSV: "09:00,14:00"
-
-}): Promise<AuthResponse> {
-  return await http<AuthResponse>("/auth/register/provider", {
-=======
   address: string;
   phone: string;
   rol: "provider";
@@ -67,8 +55,7 @@ export interface ProviderSearchFilters {
 export async function registerProvider(
   payload: ProviderRegisterRequest
 ): Promise<AuthResponse> {
-  return await http<AuthResponse>("/auth/registerProvider", {
->>>>>>> main
+  return await http<AuthResponse>("/auth/register/provider", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -95,7 +82,7 @@ export async function getAllProviders(): Promise<ProvidersListResponse> {
 export async function getProviderById(
   providerId: string
 ): Promise<ServiceProvider> {
-  return await http<ServiceProvider>(`/serviceprovider/${providerId}`, {
+  return await http<ServiceProvider>(/serviceprovider/, {
     method: "GET",
   });
 }
@@ -105,7 +92,7 @@ export async function updateProvider(
   providerId: string,
   data: UpdateProviderData
 ): Promise<ServiceProvider> {
-  return await http<ServiceProvider>(`/serviceprovider/${providerId}`, {
+  return await http<ServiceProvider>(/serviceprovider/, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
@@ -115,7 +102,7 @@ export async function updateProvider(
 export async function deleteProvider(
   providerId: string
 ): Promise<{ message: string }> {
-  return await http<{ message: string }>(`/serviceprovider/${providerId}`, {
+  return await http<{ message: string }>(/serviceprovider/, {
     method: "DELETE",
   });
 }
@@ -133,7 +120,7 @@ export async function searchProviders(
   if (filters.horarios) params.append("horarios", filters.horarios);
 
   return await http<ServiceProvider[]>(
-    `/serviceprovider/search?${params.toString()}`,
+    /serviceprovider/search?,
     {
       method: "GET",
     }
