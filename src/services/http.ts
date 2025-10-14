@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3002";
+const API_URL = "/api";
 
 export async function http<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem("accessToken");
