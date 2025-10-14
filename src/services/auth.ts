@@ -3,7 +3,7 @@ import { AuthResponse, toFrontendRole } from "./types";
 
 export async function login(email: string, password: string): Promise<{
   success: boolean;
-  role: "user" | "provider";
+  role: "client" | "provider";
   token?: string;
 }> {
   try {
@@ -15,7 +15,7 @@ export async function login(email: string, password: string): Promise<{
     localStorage.setItem("accessToken", data.accessToken);
     return { success: true, role, token: data.accessToken };
   } catch (err) {
-    return { success: false, role: "user" };
+    return { success: false, role: "client" };
   }
 }
 
