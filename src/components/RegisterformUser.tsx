@@ -13,7 +13,8 @@ function RegisterformUser() {
     confirmPassword: "",
     address: "",
     phone: "",
-    //subscription: "",
+    subscription: "",
+    paymentMethod: "",
   });
 
   const [error, setError] = useState("");
@@ -39,10 +40,15 @@ function RegisterformUser() {
       return;
     }
 
-    //if (!formData.subscription) {
-      //setError("Debes seleccionar una membresía.");
-      //return;
-    //}
+    if (!formData.subscription) {
+      setError("Debes seleccionar una membresía.");
+      return;
+    }
+
+    if (!formData.paymentMethod) {
+      setError("Debes seleccionar un método de pago.");
+      return;
+    }
 
     if (!formData.phone.match(/^\+?\d{7,15}$/)) {
       setError("Por favor ingresa un número de teléfono válido.");
@@ -54,10 +60,12 @@ function RegisterformUser() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        confirmPassword: formData.confirmPassword,
         address: formData.address,
         phone: formData.phone,
         birthDate: formData.birthDate,
-        //subscription: formData.subscription as "basic" | "standard" | "premium",
+        subscription: formData.subscription as "basic" | "standard" | "premium",
+        paymentMethod: formData.paymentMethod,
         rol: "client",
       });
 
@@ -67,8 +75,6 @@ function RegisterformUser() {
       setError(err?.message || "Error registrando usuario");
     }
   };
-
-
 
   return (
     <form
@@ -154,16 +160,29 @@ function RegisterformUser() {
         />
 
         <select
-        //  name="subscription"
-          //value={formData.subscription}
-          //onChange={handleChange}
-          //className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
-          //required
+          name="subscription"
+          value={formData.subscription}
+          onChange={handleChange}
+          className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          required
         >
           <option value="">Selecciona un plan</option>
           <option value="basic">Básico</option>
           <option value="standard">Estándar</option>
           <option value="premium">Premium</option>
+        </select>
+
+        <select
+          name="paymentMethod"
+          value={formData.paymentMethod}
+          onChange={handleChange}
+          className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          required
+        >
+          <option value="">Selecciona método de pago</option>
+          <option value="tarjeta_credito">Tarjeta de Crédito</option>
+          <option value="paypal">PayPal</option>
+          <option value="transferencia">Transferencia Bancaria</option>
         </select>
       </div>
 
@@ -199,8 +218,7 @@ function RegisterformUser() {
         </a>
       </div>
     </form>
-
-  )
+  );
 }
 
-export default RegisterformUser
+export default RegisterformUser;
