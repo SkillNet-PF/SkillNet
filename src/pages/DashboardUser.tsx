@@ -1,3 +1,5 @@
+"use client";
+
 import {
   FaEdit,
   FaEnvelope,
@@ -15,6 +17,8 @@ import { Link } from "react-router-dom";
 import { useAuthContext } from "../contexts/AuthContext";
 import { uploadAvatar } from "../services/auth";
 import { useRef, useState } from "react";
+
+
 
 function UserProfile() {
   const { user, setUser } = useAuthContext();
