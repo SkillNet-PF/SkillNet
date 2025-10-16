@@ -12,18 +12,29 @@ import {
   FaCheckCircle,
   FaCreditCard,
   FaCalendarAlt,
+  FaSave,
+  FaTimes,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { useAuthContext } from "../contexts/AuthContext";
-import { uploadAvatar } from "../services/auth";
+import { uploadAvatar, updateUserProfile } from "../services/auth";
 import { useRef, useState } from "react";
-
-
 
 function UserProfile() {
   const { user, setUser } = useAuthContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Estados para edición inline
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [tempValues, setTempValues] = useState({
+    name: "",
+    email: "",
+    birthDate: "",
+    address: "",
+    phone: "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
   // Formatear fechas para mostrar
   const formatDate = (dateString: string) => {
@@ -82,6 +93,68 @@ function UserProfile() {
         fileInputRef.current.value = "";
       }
     }
+  };
+
+  // Iniciar edición de un campo
+  const startEditing = (field: string) => {
+    setEditingField(field);
+    setTempValues({
+      name: user?.name || "",
+      email: user?.email || "",
+      birthDate: user?.birthDate || "",
+      address: (user as any)?.address || "",
+      phone: (user as any)?.phone || "",
+    });
+  };
+
+  // Cancelar edición
+  const cancelEditing = () => {
+    setEditingField(null);
+    setTempValues({
+      name: "",
+      email: "",
+      birthDate: "",
+      address: "",
+      phone: "",
+    });
+  };
+
+  // Guardar cambios
+  const saveChanges = async () => {
+    if (!editingField || !user?.userId) return;
+
+    setIsSaving(true);
+    try {
+      // Preparar los datos para enviar al API
+      const updates = {
+        [editingField]: tempValues[editingField as keyof typeof tempValues],
+      };
+
+      // Hacer la llamada al API para actualizar el usuario
+      const updatedUser = await updateUserProfile(user.userId, updates);
+
+      // Actualizar el contexto local con los datos del servidor
+      setUser({
+        ...user,
+        [editingField]: tempValues[editingField as keyof typeof tempValues],
+      });
+
+      setEditingField(null);
+      alert("¡Campo actualizado correctamente!");
+    } catch (error: any) {
+      console.error("Error al actualizar el campo:", error);
+      alert(
+        `Error al actualizar el campo: ${error.message || "Error desconocido"}`
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }; // Manejar cambio en input de edición
+  const handleInputChange = (field: string, value: string) => {
+    setTempValues((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   return (
@@ -191,18 +264,6 @@ function UserProfile() {
             {isUploading && (
               <p className="text-sm text-blue-600 mb-2">Subiendo imagen...</p>
             )}
-
-            <button
-              onClick={handleCameraClick}
-              disabled={isUploading}
-              className={`text-sm hover:underline mt-1 block ${
-                isUploading
-                  ? "text-gray-400 cursor-not-allowed"
-                  : "text-blue-600 cursor-pointer"
-              }`}
-            >
-              {isUploading ? "Subiendo..." : "Cambiar Foto de Perfil"}
-            </button>
           </div>
 
           {/* Sección 2: Datos de Cuenta */}
@@ -217,9 +278,48 @@ function UserProfile() {
                 <FaUser />
                 <span>Nombre Completo</span>
               </h4>
-              <p className="bg-gray-50 p-3 rounded-lg border text-gray-700 font-medium">
-                {user?.name || "No especificado"}
-              </p>
+              {editingField === "name" ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={tempValues.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ingresa tu nombre completo"
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={saveChanges}
+                      disabled={isSaving}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaSave />
+                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      disabled={isSaving}
+                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaTimes />
+                      <span>Cancelar</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                  <p className="text-gray-700 font-medium">
+                    {user?.name || "No especificado"}
+                  </p>
+                  <button
+                    onClick={() => startEditing("name")}
+                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
+                    title="Editar nombre"
+                  >
+                    <FaEdit />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Correo Electrónico */}
@@ -228,14 +328,48 @@ function UserProfile() {
                 <FaEnvelope />
                 <span>Correo Electrónico</span>
               </h4>
-              <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
-                <p className="text-gray-700 truncate">
-                  {user?.email || "No especificado"}
-                </p>
-                <button className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50">
-                  <FaEdit />
-                </button>
-              </div>
+              {editingField === "email" ? (
+                <div className="space-y-2">
+                  <input
+                    type="email"
+                    value={tempValues.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ingresa tu correo electrónico"
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={saveChanges}
+                      disabled={isSaving}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaSave />
+                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      disabled={isSaving}
+                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaTimes />
+                      <span>Cancelar</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                  <p className="text-gray-700 truncate">
+                    {user?.email || "No especificado"}
+                  </p>
+                  <button
+                    onClick={() => startEditing("email")}
+                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
+                    title="Editar correo"
+                  >
+                    <FaEdit />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Fecha de Nacimiento */}
@@ -244,11 +378,51 @@ function UserProfile() {
                 <FaBirthdayCake />
                 <span>Fecha de Nacimiento</span>
               </h4>
-              <p className="bg-gray-50 p-3 rounded-lg border text-gray-700">
-                {user?.birthDate
-                  ? formatDate(user.birthDate)
-                  : "No especificada"}
-              </p>
+              {editingField === "birthDate" ? (
+                <div className="space-y-2">
+                  <input
+                    type="date"
+                    value={tempValues.birthDate}
+                    onChange={(e) =>
+                      handleInputChange("birthDate", e.target.value)
+                    }
+                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={saveChanges}
+                      disabled={isSaving}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaSave />
+                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      disabled={isSaving}
+                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaTimes />
+                      <span>Cancelar</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                  <p className="text-gray-700">
+                    {user?.birthDate
+                      ? formatDate(user.birthDate)
+                      : "No especificada"}
+                  </p>
+                  <button
+                    onClick={() => startEditing("birthDate")}
+                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
+                    title="Editar fecha de nacimiento"
+                  >
+                    <FaEdit />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Dirección */}
@@ -257,9 +431,50 @@ function UserProfile() {
                 <FaMapMarkerAlt />
                 <span>Dirección</span>
               </h4>
-              <p className="bg-gray-50 p-3 rounded-lg border text-gray-700">
-                {(user as any)?.address || "No especificada"}
-              </p>
+              {editingField === "address" ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={tempValues.address}
+                    onChange={(e) =>
+                      handleInputChange("address", e.target.value)
+                    }
+                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ingresa tu dirección"
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={saveChanges}
+                      disabled={isSaving}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaSave />
+                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      disabled={isSaving}
+                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaTimes />
+                      <span>Cancelar</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                  <p className="text-gray-700">
+                    {(user as any)?.address || "No especificada"}
+                  </p>
+                  <button
+                    onClick={() => startEditing("address")}
+                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
+                    title="Editar dirección"
+                  >
+                    <FaEdit />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Teléfono */}
@@ -268,9 +483,48 @@ function UserProfile() {
                 <FaPhone />
                 <span>Teléfono</span>
               </h4>
-              <p className="bg-gray-50 p-3 rounded-lg border text-gray-700">
-                {(user as any)?.phone || "No especificado"}
-              </p>
+              {editingField === "phone" ? (
+                <div className="space-y-2">
+                  <input
+                    type="tel"
+                    value={tempValues.phone}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
+                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ingresa tu teléfono"
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={saveChanges}
+                      disabled={isSaving}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaSave />
+                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      disabled={isSaving}
+                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaTimes />
+                      <span>Cancelar</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                  <p className="text-gray-700">
+                    {(user as any)?.phone || "No especificado"}
+                  </p>
+                  <button
+                    onClick={() => startEditing("phone")}
+                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
+                    title="Editar teléfono"
+                  >
+                    <FaEdit />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Estado de la Cuenta */}
@@ -350,17 +604,6 @@ function UserProfile() {
                   ? "Proveedor"
                   : user?.rol || "No especificado"}
               </p>
-            </div>
-
-            {/* Botón de Editar Perfil */}
-            <div className="pt-4 border-t">
-              <Link
-                to="/profile/edit"
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center space-x-2"
-              >
-                <FaEdit />
-                <span>Editar Perfil</span>
-              </Link>
             </div>
           </div>
         </div>
