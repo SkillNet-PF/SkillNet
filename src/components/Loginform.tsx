@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { login } from "../services/auth";
 import { useAuthContext } from "../contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { auth0RegisterUrl } from "../services/auth";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 
 function LoginForm() {
   const { setRole } = useAuthContext();
@@ -11,11 +11,53 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [validations, setValidations] = useState({
+
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+    hasSymbol: false,
+    minLength: false,
+  })
+
+  const [emailValid, setEmailValid] = useState(true)
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    setEmailValid(regex.test(email));
+  }, [email]);
+
+
+  useEffect(() => {
+    setValidations({
+      hasUppercase: /[A-Z]/.test(password),
+      hasLowercase: /[a-z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasSymbol: /[^A-Za-z0-9]/.test(password),
+      minLength: password.length >= 8,
+    });
+  }, [password]
+  );
+
+  const isFormValid =
+    emailValid &&
+    validations.hasUppercase &&
+    validations.hasLowercase &&
+    validations.hasNumber &&
+    validations.hasSymbol &&
+    validations.minLength;
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!emailValid) {
+      setError("Por favor ingresa un correo electrónico válido.");
+      return;
+    }
 
     try {
       const res = await login(email, password);
@@ -30,6 +72,20 @@ function LoginForm() {
     }
   };
 
+  const renderValidation = (isValid: boolean, text: string) => (
+    <p
+      className={`flex items-center text-sm transition-colors duration-300 ${isValid ? "text-green-600" : "text-gray-500"
+        }`}
+    >
+      {isValid ? (
+        <FaCheckCircle className="mr-2" />
+      ) : (
+        <FaTimesCircle className="mr-2" />
+      )}
+      {text}
+    </p>
+  );
+
   return (
     <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md">
       <h2 className="text-3xl font-semibold text-center text-blue-600 mb-6">
@@ -37,8 +93,6 @@ function LoginForm() {
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* ... (El resto de tu formulario sigue igual) ... */}
-
         {/* Input Correo electrónico */}
         <div>
           <label
@@ -51,11 +105,18 @@ function LoginForm() {
             type="email"
             id="email"
             placeholder="ejemplo@correo.com"
-            className="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+            className={`w-full border ${emailValid ? "border-gray-300" : "border-red-500"
+              } p-2 rounded-lg focus:outline-none focus:ring-2 ${emailValid ? "focus:ring-blue-400" : "focus:ring-red-400"
+              } transition`}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
+          {!emailValid && (
+            <p className="text-red-500 text-xs mt-1">
+              Correo electrónico inválido.
+            </p>
+          )}
         </div>
 
         {/* Input Contraseña */}
@@ -85,6 +146,15 @@ function LoginForm() {
               {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
             </button>
           </div>
+
+          {/* Validaciones dinámicas */}
+          <div className="mt-2 space-y-1">
+            {renderValidation(validations.hasUppercase, "Una letra mayúscula")}
+            {renderValidation(validations.hasLowercase, "Una letra minúscula")}
+            {renderValidation(validations.hasNumber, "Un número")}
+            {renderValidation(validations.hasSymbol, "Un símbolo (!, $, #, etc.)")}
+            {renderValidation(validations.minLength, "Mínimo 8 caracteres")}
+          </div>
         </div>
 
         {error && (
@@ -93,9 +163,15 @@ function LoginForm() {
           </p>
         )}
 
+
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition font-medium"
+          disabled={!isFormValid}
+          className={`w-full p-2 rounded-lg font-medium transition
+    ${isFormValid
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
         >
           Entrar
         </button>
