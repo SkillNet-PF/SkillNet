@@ -1,6 +1,8 @@
-import { FaUserCircle, FaSignOutAlt } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
+import { AppBar, Toolbar, Typography, Button, IconButton, Stack, Tooltip, Container } from "@mui/material";
+import { FaUserCircle, FaSignOutAlt, FaMoon, FaSun } from "react-icons/fa";
 import { useAuthContext } from "../contexts/AuthContext";
+import { useThemeMode } from "../ui";
 
 function NavbarUser() {
   const { logout } = useAuthContext();
@@ -11,43 +13,43 @@ function NavbarUser() {
     navigate('/');
   };
 
+  const { mode, toggleMode } = useThemeMode();
+
   return (
-    <nav className="bg-blue-900 text-white shadow-lg">
-      <div className="container mx-auto px-6 py-3 flex justify-between items-center">
-        {/* Logo */}
+    <AppBar position="static" color="primary" enableColorOnDark>
+      <Container maxWidth="lg">
+        <Toolbar disableGutters sx={{ minHeight: 64, gap: 2 }}>
+          <Typography component={Link} to="/" variant="h6" color="inherit" sx={{ textDecoration: 'none', fontWeight: 700 }}>
+            SkillNet
+          </Typography>
 
-        <Link to="/" className="text-2xl font-bold cursor-pointer hover:text-yellow-300">
-          Skillnet
-        </Link>
+          <Stack direction="row" spacing={2} sx={{ marginLeft: 'auto' }} alignItems="center">
+            <Button component={Link} to="/turnos" color="inherit">Mis Turnos</Button>
+            <Button component={Link} to="/solicitar" color="inherit">Solicitar Turno</Button>
 
-<div className="flex items-center space-x-6">
-        {/* Links */}
-        <div className="hidden md:flex space-x-6">
-          <a href="/turnos" className="hover:text-yellow-300 transition text-lg">
-            Mis Turnos
-          </a>
-          <a href="/solicitar" className="hover:text-yellow-300 transition text-lg">
-            Solicitar Turno
-          </a>
-        </div>
+            <Tooltip title={mode === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}>
+              <IconButton color="inherit" onClick={toggleMode} aria-label="toggle theme">
+                {mode === 'light' ? <FaMoon /> : <FaSun />}
+              </IconButton>
+            </Tooltip>
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 text-base font-semibold bg-yellow-400 text-blue-900 hover:text-white transition"
-        >
-          <FaSignOutAlt className="text-xl" />
-          Salir
-        </button>
+            <IconButton color="inherit" component={Link} to="/perfil" aria-label="profile">
+              <FaUserCircle />
+            </IconButton>
 
-        {/* Perfil */}
-        <div>
-          <a href="/perfil">
-            <FaUserCircle className="text-3xl text-gray-700 hover:text-blue-600" />
-          </a>
-        </div>
-      </div>
-      </div>
-    </nav>
+            <Button
+              onClick={handleLogout}
+              variant="contained"
+              color="secondary"
+              startIcon={<FaSignOutAlt />}
+              sx={{ borderRadius: 9999 }}
+            >
+              Salir
+            </Button>
+          </Stack>
+        </Toolbar>
+      </Container>
+    </AppBar>
   );
 }
 

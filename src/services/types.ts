@@ -48,6 +48,7 @@ export interface ProviderRegisterRequest {
   address: string;
   phone: string;
   rol: "provider";
+  isActive: boolean; // Campo requerido por el backend
 
   // Campos específicos de ProviderRegisterDto
   serviceType: string;

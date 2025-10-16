@@ -14,7 +14,7 @@ function App() {
   return (
     <Router>
       <NavbarHandler />
-      <main className="p-6">
+      <main>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />

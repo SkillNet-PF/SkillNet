@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { login } from "../services/auth";
-import { useAuthContext } from "../contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
-import { auth0RegisterUrl } from "../services/auth";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { Button, TextField, IconButton, InputAdornment, Alert, Typography, Box, Stack, Paper } from "@mui/material";
+import { login, auth0RegisterUrl } from "../services/auth";
+import { useAuthContext } from "../contexts/AuthContext";
 
 function LoginForm() {
   const { setRole } = useAuthContext();
@@ -31,108 +31,98 @@ function LoginForm() {
   };
 
   return (
-    <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md">
-      <h2 className="text-3xl font-semibold text-center text-blue-600 mb-6">
+    <Paper elevation={8} className="shadow-xl rounded-2xl p-8 w-full max-w-md">
+      <Typography variant="h4" color="primary" align="center" className="mb-6">
         Iniciar Sesión
-      </h2>
+      </Typography>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* ... (El resto de tu formulario sigue igual) ... */}
-
-        {/* Input Correo electrónico */}
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-gray-700 text-sm font-medium mb-1"
-          >
-            Correo electrónico
-          </label>
-          <input
-            type="email"
+      <Box component="form" onSubmit={handleSubmit}>
+        <Stack spacing={2}>
+          <TextField
             id="email"
+            type="email"
+            label="Correo electrónico"
             placeholder="ejemplo@correo.com"
-            className="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            fullWidth
             required
           />
-        </div>
 
-        {/* Input Contraseña */}
-        <div>
-          <label
-            htmlFor="password"
-            className="block text-gray-700 text-sm font-medium mb-1"
-          >
-            Contraseña
-          </label>
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              id="password"
-              placeholder="********"
-              className="w-full border border-gray-300 p-2 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-              title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+          <TextField
+            id="password"
+            type={showPassword ? "text" : "password"}
+            label="Contraseña"
+            placeholder="********"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            fullWidth
+            required
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowPassword(!showPassword)}
+                    edge="end"
+                    title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  >
+                    {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          {error && (
+            <Alert severity="error" variant="filled">
+              {error}
+            </Alert>
+          )}
+
+          <Button type="submit" variant="contained" color="primary" fullWidth>
+            Entrar
+          </Button>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              component="a"
+              href={auth0RegisterUrl("client", "google-oauth2")}
+              variant="outlined"
+              color="inherit"
             >
-              {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
-            </button>
+              <span className="flex items-center gap-2">
+                <img
+                  src="https://www.svgrepo.com/show/475656/google-color.svg"
+                  alt="Google"
+                  className="w-5 h-5"
+                />
+                Google
+              </span>
+            </Button>
+            <Button
+              component="a"
+              href={auth0RegisterUrl("client", "github")}
+              variant="outlined"
+              color="inherit"
+            >
+              <span className="flex items-center gap-2">
+                <img
+                  src="https://www.svgrepo.com/show/512317/github-142.svg"
+                  alt="GitHub"
+                  className="w-5 h-5"
+                />
+                GitHub
+              </span>
+            </Button>
           </div>
-        </div>
 
-        {error && (
-          <p className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
-            {error}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition font-medium"
-        >
-          Entrar
-        </button>
-
-        <div className="grid grid-cols-2 gap-2">
-          <a
-            href={auth0RegisterUrl("client", "google-oauth2")}
-            className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
-          >
-            <img
-              src="https://www.svgrepo.com/show/475656/google-color.svg"
-              alt="Google"
-              className="w-5 h-5"
-            />
-            <span>Google</span>
-          </a>
-          <a
-            href={auth0RegisterUrl("client", "github")}
-            className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
-          >
-            <img
-              src="https://www.svgrepo.com/show/512317/github-142.svg"
-              alt="GitHub"
-              className="w-5 h-5"
-            />
-            <span>GitHub</span>
-          </a>
-        </div>
-
-        <p className="text-center text-sm text-gray-500 mt-4">
-          ¿No tienes cuenta?{" "}
-          <Link to="/register" className="text-blue-600 hover:underline">
-            Crea una nueva
-          </Link>
-        </p>
-      </form>
-    </div>
+          <Typography align="center" variant="body2" color="text.secondary" className="mt-2">
+            ¿No tienes cuenta? <Link to="/register" className="text-blue-600 hover:underline">Crea una nueva</Link>
+          </Typography>
+        </Stack>
+      </Box>
+    </Paper>
   );
 }
 

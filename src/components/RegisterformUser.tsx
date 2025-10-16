@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { Box, Stack, TextField, Button, IconButton, InputAdornment, MenuItem, Alert, Typography, Paper } from "@mui/material";
 import { registerUser } from "../services/clients";
 import { auth0RegisterUrl } from "../services/auth";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function RegisterformUser() {
   const [formData, setFormData] = useState({
@@ -80,175 +81,160 @@ function RegisterformUser() {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white p-8 rounded-2xl shadow-lg space-y-4 max-w-md mx-auto"
-    >
-      <h2 className="text-2xl font-bold text-center text-blue-600">
-        Registro de Usuario
-      </h2>
+    <Paper elevation={8} className="p-8 rounded-2xl shadow-lg max-w-md mx-auto">
+      <Box component="form" onSubmit={handleSubmit}>
+      <Typography variant="h5" color="primary" align="center" className="mb-2">Registro de Usuario</Typography>
 
       {error && (
-        <p className="text-red-500 text-sm text-center font-medium">{error}</p>
+        <Alert severity="error" className="mb-3">{error}</Alert>
       )}
 
-      <div className="space-y-3">
-        <input
-          type="text"
+      <Stack spacing={2}>
+        <TextField
           name="name"
-          placeholder="Nombre completo"
+          label="Nombre completo"
           value={formData.name}
           onChange={handleChange}
-          className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          fullWidth
           required
         />
 
-        <input
-          type="date"
+        <TextField
           name="birthDate"
+          label="Fecha de nacimiento"
+          type="date"
           value={formData.birthDate}
           onChange={handleChange}
-          className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          fullWidth
+          InputLabelProps={{ shrink: true }}
           required
         />
 
-        <input
-          type="email"
+        <TextField
           name="email"
-          placeholder="Correo electrónico"
+          type="email"
+          label="Correo electrónico"
           value={formData.email}
           onChange={handleChange}
-          className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          fullWidth
           required
         />
 
-        {/* Campo de Contraseña */}
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            name="password"
-            placeholder="Contraseña"
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full border border-gray-300 p-2 pr-10 rounded focus:ring-2 focus:ring-blue-400 outline-none"
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-            title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-          >
-            {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
-          </button>
-        </div>
+        <TextField
+          name="password"
+          type={showPassword ? "text" : "password"}
+          label="Contraseña"
+          value={formData.password}
+          onChange={handleChange}
+          fullWidth
+          required
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle password visibility"
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
+                >
+                  {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+        />
 
-        {/* Campo de Confirmar Contraseña */}
-        <div className="relative">
-          <input
-            type={showConfirmPassword ? "text" : "password"}
-            name="confirmPassword"
-            placeholder="Confirmar contraseña"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            className="w-full border border-gray-300 p-2 pr-10 rounded focus:ring-2 focus:ring-blue-400 outline-none"
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-            title={
-              showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-            }
-          >
-            {showConfirmPassword ? (
-              <FaEyeSlash size={18} />
-            ) : (
-              <FaEye size={18} />
-            )}
-          </button>
-        </div>
+        <TextField
+          name="confirmPassword"
+          type={showConfirmPassword ? "text" : "password"}
+          label="Confirmar contraseña"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          fullWidth
+          required
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle password visibility"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  edge="end"
+                >
+                  {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+        />
 
-        <input
-          type="text"
+        <TextField
           name="address"
-          placeholder="Dirección"
+          label="Dirección"
           value={formData.address}
           onChange={handleChange}
-          className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          fullWidth
           required
         />
 
-        <input
-          type="text"
+        <TextField
           name="phone"
-          placeholder="Teléfono"
+          label="Teléfono"
           value={formData.phone}
           onChange={handleChange}
-          className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          fullWidth
           required
         />
 
-        <select
+        <TextField
+          select
           name="subscription"
+          label="Plan"
           value={formData.subscription}
           onChange={handleChange}
-          className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          fullWidth
           required
         >
-          <option value="">Selecciona un plan</option>
-          <option value="basic">Básico</option>
-          <option value="standard">Estándar</option>
-          <option value="premium">Premium</option>
-        </select>
+          <MenuItem value="">Selecciona un plan</MenuItem>
+          <MenuItem value="basic">Básico</MenuItem>
+          <MenuItem value="standard">Estándar</MenuItem>
+          <MenuItem value="premium">Premium</MenuItem>
+        </TextField>
 
-        <select
+        <TextField
+          select
           name="paymentMethod"
+          label="Método de pago"
           value={formData.paymentMethod}
           onChange={handleChange}
-          className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none"
+          fullWidth
           required
         >
-          <option value="">Selecciona método de pago</option>
-          <option value="tarjeta_credito">Tarjeta de Crédito</option>
-          <option value="paypal">PayPal</option>
-          <option value="transferencia">Transferencia Bancaria</option>
-        </select>
-      </div>
+          <MenuItem value="">Selecciona método de pago</MenuItem>
+          <MenuItem value="tarjeta_credito">Tarjeta de Crédito</MenuItem>
+          <MenuItem value="paypal">PayPal</MenuItem>
+          <MenuItem value="transferencia">Transferencia Bancaria</MenuItem>
+        </TextField>
 
-      <button
-        type="submit"
-        className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition-colors"
-      >
-        Registrarse
-      </button>
+        <Button type="submit" variant="contained" color="primary" fullWidth>
+          Registrarse
+        </Button>
 
-      <div className="pt-2 grid grid-cols-2 gap-2">
-        <a
-          href={auth0RegisterUrl("client", "google-oauth2")}
-          className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
-        >
-          <img
-            src="https://www.svgrepo.com/show/475656/google-color.svg"
-            alt="Google"
-            className="w-5 h-5"
-          />
-          <span>Continuar con Google</span>
-        </a>
-        <a
-          href={auth0RegisterUrl("client", "github")}
-          className="flex items-center justify-center gap-2 w-full bg-white border border-gray-300 text-gray-700 p-2 rounded hover:bg-gray-50 transition-colors"
-        >
-          <img
-            src="https://www.svgrepo.com/show/512317/github-142.svg"
-            alt="GitHub"
-            className="w-5 h-5"
-          />
-          <span>Continuar con GitHub</span>
-        </a>
-      </div>
-    </form>
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <Button component="a" href={auth0RegisterUrl("client", "google-oauth2")} variant="outlined" color="inherit">
+            <span className="flex items-center gap-2">
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+              Continuar con Google
+            </span>
+          </Button>
+          <Button component="a" href={auth0RegisterUrl("client", "github")} variant="outlined" color="inherit">
+            <span className="flex items-center gap-2">
+              <img src="https://www.svgrepo.com/show/512317/github-142.svg" alt="GitHub" className="w-5 h-5" />
+              Continuar con GitHub
+            </span>
+          </Button>
+        </div>
+      </Stack>
+      </Box>
+    </Paper>
   );
 }
 
