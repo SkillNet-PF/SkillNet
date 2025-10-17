@@ -8,6 +8,7 @@ import RegisterChoice from "./pages/RegisterChoice";
 import NavbarHandler from "./components/NavbarHandler";
 import UserProfile from "./pages/DashboardUser";
 import AuthCallback from "./pages/AuthCallback";
+import DashboardAdmin from "./pages/admin/DashboardAdmin";
 
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
           <Route path="/register/user" element={<RegisterUser />} />
           <Route path="/register/provider" element={<RegisterProvider />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/admin/dashboard" element={<DashboardAdmin />} />
           <Route path="/perfil" element={<UserProfile />} /> 
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -13,9 +13,34 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  const [passwordChecks, setPasswordChecks] = useState({
+    minLength: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    specialChar: false,
+
+  });
+
+  const validatePassword = (pwd: string) => {
+    setPasswordChecks({
+      minLength: pwd.length >= 6,
+      uppercase: /[A-Z]/.test(pwd),
+      lowercase: /[a-z]/.test(pwd),
+      number: /[0-9]/.test(pwd),
+      specialChar: /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
+
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (Object.values(passwordChecks).includes(false)) {
+      setError("La contraseña no cumple todos los requisitos.");
+      return;
+    }
 
     try {
       const res = await login(email, password);
@@ -29,6 +54,7 @@ function LoginForm() {
       setError("Error al conectar con el servidor. Intenta nuevamente.");
     }
   };
+
 
   return (
     <Paper elevation={8} className="shadow-xl rounded-2xl p-8 w-full max-w-md">
@@ -55,7 +81,10 @@ function LoginForm() {
             label="Contraseña"
             placeholder="********"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              validatePassword(e.target.value);
+            }}
             fullWidth
             required
             InputProps={{
@@ -73,6 +102,15 @@ function LoginForm() {
               ),
             }}
           />
+
+         
+          <Box className="mt-1 text-sm">
+            <Typography color={passwordChecks.minLength ? "green" : "error"}>• Al menos 6 caracteres</Typography>
+            <Typography color={passwordChecks.uppercase ? "green" : "error"}>• Una letra mayúscula</Typography>
+            <Typography color={passwordChecks.lowercase ? "green" : "error"}>• Una letra minúscula</Typography>
+            <Typography color={passwordChecks.number ? "green" : "error"}>• Un número</Typography>
+            <Typography color={passwordChecks.specialChar ? "green" : "error"}>• Un carácter especial (!@#$%^&*...)</Typography>
+          </Box>
 
           {error && (
             <Alert severity="error" variant="filled">
@@ -127,3 +165,4 @@ function LoginForm() {
 }
 
 export default LoginForm;
+
