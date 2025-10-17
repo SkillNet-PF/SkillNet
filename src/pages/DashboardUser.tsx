@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useRef, useState, useEffect } from "react";
 import {
   FaEdit,
   FaEnvelope,
@@ -18,23 +19,40 @@ import {
 import { Link } from "react-router-dom";
 import { useAuthContext } from "../contexts/AuthContext";
 import { uploadAvatar, updateUserProfile } from "../services/auth";
-import { useRef, useState } from "react";
 
 function UserProfile() {
   const { user, setUser } = useAuthContext();
+
+  // Normaliza el shape del usuario por si viene como { user }, { data } o directo
+  const profile: any =
+    (user as any)?.user || (user as any)?.data || user || null;
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [imgBust, setImgBust] = useState<number>(0);
 
   // --- edición inline ---
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValues, setTempValues] = useState({
-    name: "",
-    email: "",
-    birthDate: "",
-    address: "",
-    phone: "",
+    name: profile?.name || "",
+    email: profile?.email || "",
+    birthDate: profile?.birthDate || "",
+    address: profile?.address || "",
+    phone: profile?.phone || "",
   });
   const [isSaving, setIsSaving] = useState(false);
+
+  // Re-sincroniza tempValues cuando se hidrata/cambia el profile
+  useEffect(() => {
+    if (!profile) return;
+    setTempValues({
+      name: profile?.name || "",
+      email: profile?.email || "",
+      birthDate: profile?.birthDate || "",
+      address: profile?.address || "",
+      phone: profile?.phone || "",
+    });
+  }, [profile]);
 
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("es-ES", {
@@ -62,9 +80,20 @@ function UserProfile() {
 
     setIsUploading(true);
     try {
+      // tu servicio actual devuelve { imgProfile }
       const result = await uploadAvatar(file);
+
       if (user) {
-        setUser({ ...user, imgProfile: result.imgProfile });
+        // Conserva el shape original del contexto
+        const raw: any = user;
+        const next = raw?.user
+          ? { ...raw, user: { ...raw.user, imgProfile: result.imgProfile } }
+          : raw?.data
+          ? { ...raw, data: { ...raw.data, imgProfile: result.imgProfile } }
+          : { ...raw, imgProfile: result.imgProfile };
+
+        setUser(next);
+        setImgBust(Date.now()); // fuerza que el <img> no use caché
       }
       alert("¡Imagen de perfil actualizada correctamente!");
     } catch (error: any) {
@@ -78,11 +107,11 @@ function UserProfile() {
   const startEditing = (field: string) => {
     setEditingField(field);
     setTempValues({
-      name: user?.name || "",
-      email: user?.email || "",
-      birthDate: user?.birthDate || "",
-      address: (user as any)?.address || "",
-      phone: (user as any)?.phone || "",
+      name: profile?.name || "",
+      email: profile?.email || "",
+      birthDate: profile?.birthDate || "",
+      address: profile?.address || "",
+      phone: profile?.phone || "",
     });
   };
 
@@ -95,14 +124,24 @@ function UserProfile() {
   };
 
   const saveChanges = async () => {
-    if (!editingField || !user?.userId) return;
+    if (!editingField || !profile?.userId) return;
     setIsSaving(true);
     try {
       const updates = {
         [editingField]: tempValues[editingField as keyof typeof tempValues],
       };
-      await updateUserProfile(user.userId, updates);
-      setUser({ ...user, ...updates });
+
+      await updateUserProfile(profile.userId, updates);
+
+      // Mantén el shape original del contexto al actualizar
+      const raw: any = user;
+      const next = raw?.user
+        ? { ...raw, user: { ...raw.user, ...updates } }
+        : raw?.data
+        ? { ...raw, data: { ...raw.data, ...updates } }
+        : { ...raw, ...updates };
+
+      setUser(next);
       setEditingField(null);
       alert("¡Campo actualizado correctamente!");
     } catch (e: any) {
@@ -112,10 +151,19 @@ function UserProfile() {
     }
   };
 
+  // Fallback mientras hidrata el contexto
+  if (!profile) {
+    return (
+      <div className="container mx-auto p-6 min-h-screen">
+        <p>Cargando perfil…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6 min-h-screen profile-page bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
       <h1 className="text-4xl font-extrabold text-blue-900 dark:text-blue-200 mb-8 border-b-4 border-yellow-400 pb-2 dark:border-yellow-400">
-        Perfil de Usuario
+        Perfil de cliente
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -128,9 +176,9 @@ function UserProfile() {
             </h3>
 
             <div className="space-y-4">
-              {!user ||
-              !(user as any).requests ||
-              (user as any).requests?.length === 0 ? (
+              {!profile ||
+              !profile.requests ||
+              profile.requests?.length === 0 ? (
                 <div className="text-center py-8">
                   <FaClipboardList className="mx-auto text-6xl text-gray-300 dark:text-slate-600 mb-4" />
                   <p className="text-gray-500 dark:text-slate-400 text-lg">
@@ -141,7 +189,7 @@ function UserProfile() {
                   </p>
                 </div>
               ) : (
-                (user as any).requests.map((req: any) => (
+                profile.requests.map((req: any) => (
                   <div
                     key={req.id}
                     className="p-4 border rounded-lg flex justify-between items-center bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-gray-200 dark:border-slate-700 transition"
@@ -183,8 +231,9 @@ function UserProfile() {
             <div className="relative w-28 h-28 mx-auto mb-4">
               <img
                 src={
-                  user?.imgProfile ||
-                  "https://via.placeholder.com/150/0000FF/FFFFFF?text=U"
+                  ((profile?.imgProfile || profile?.picture) ??
+                    "https://via.placeholder.com/150/0000FF/FFFFFF?text=U") +
+                  (imgBust ? `?v=${imgBust}` : "")
                 }
                 alt="Foto de Perfil"
                 className="w-full h-full rounded-full object-cover border-4 border-blue-600"
@@ -219,19 +268,7 @@ function UserProfile() {
                 Subiendo imagen...
               </p>
             )}
-
-            {/* Botón textual adicional */}
-            <button
-              onClick={handleCameraClick}
-              disabled={isUploading}
-              className={`text-sm hover:underline mt-1 block dark:text-blue-400 ${
-                isUploading
-                  ? "text-gray-400 cursor-not-allowed"
-                  : "text-blue-600 cursor-pointer"
-              }`}
-            >
-              {isUploading ? "Subiendo..." : "Cambiar Foto de Perfil"}
-            </button>
+            {/* (El botón textual “Cambiar Foto de Perfil” fue removido) */}
           </div>
 
           {/* Datos de cuenta */}
@@ -278,7 +315,7 @@ function UserProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
                   <p className="text-gray-700 dark:text-slate-200 font-medium">
-                    {user?.name || "No especificado"}
+                    {profile?.name || "No especificado"}
                   </p>
                   <button
                     onClick={() => startEditing("name")}
@@ -329,7 +366,7 @@ function UserProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
                   <p className="text-gray-700 dark:text-slate-200 truncate">
-                    {user?.email || "No especificado"}
+                    {profile?.email || "No especificado"}
                   </p>
                   <button
                     onClick={() => startEditing("email")}
@@ -381,8 +418,8 @@ function UserProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700">
-                    {user?.birthDate
-                      ? formatDate(user.birthDate)
+                    {profile?.birthDate
+                      ? formatDate(profile.birthDate)
                       : "No especificada"}
                   </p>
                   <button
@@ -436,7 +473,7 @@ function UserProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700">
-                    {(user as any)?.address || "No especificada"}
+                    {profile?.address || "No especificada"}
                   </p>
                   <button
                     onClick={() => startEditing("address")}
@@ -487,7 +524,7 @@ function UserProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700">
-                    {(user as any)?.phone || "No especificado"}
+                    {profile?.phone || "No especificado"}
                   </p>
                   <button
                     onClick={() => startEditing("phone")}
@@ -509,30 +546,30 @@ function UserProfile() {
               <div className="flex items-center space-x-2 bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
                 <span
                   className={`w-3 h-3 rounded-full ${
-                    user?.isActive ? "bg-green-500" : "bg-red-500"
+                    profile?.isActive ? "bg-green-500" : "bg-red-500"
                   }`}
                 />
                 <p className="text-gray-700 dark:text-slate-200">
-                  {user?.isActive ? "Activa" : "Inactiva"}
+                  {profile?.isActive ? "Activa" : "Inactiva"}
                 </p>
               </div>
             </div>
 
             {/* Servicios disponibles */}
-            {(user as any)?.servicesLeft !== undefined && (
+            {profile?.servicesLeft !== undefined && (
               <div className="mb-4">
                 <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
                   <FaCreditCard />
                   <span>Servicios Disponibles</span>
                 </h4>
                 <p className="bg-blue-50 dark:bg-slate-800 p-3 rounded-lg border border-blue-200 dark:border-slate-700 text-blue-700 dark:text-blue-300 font-semibold">
-                  {(user as any).servicesLeft} servicios restantes
+                  {profile.servicesLeft} servicios restantes
                 </p>
               </div>
             )}
 
             {/* Suscripción */}
-            {(user as any)?.startDate && (user as any)?.endDate && (
+            {profile?.startDate && profile?.endDate && (
               <div className="mb-4">
                 <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
                   <FaCalendarAlt />
@@ -541,23 +578,20 @@ function UserProfile() {
                 <div className="bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 space-y-2">
                   <p className="text-gray-700 dark:text-slate-200">
                     <span className="font-medium">Inicio:</span>{" "}
-                    {formatDate((user as any).startDate)}
+                    {formatDate(profile.startDate)}
                   </p>
                   <p className="text-gray-700 dark:text-slate-200">
                     <span className="font-medium">Vencimiento:</span>{" "}
-                    {formatDate((user as any).endDate)}
+                    {formatDate(profile.endDate)}
                   </p>
                   <div className="flex items-center space-x-2">
                     <span
                       className={`w-3 h-3 rounded-full ${
-                        (user as any).paymentStatus
-                          ? "bg-green-500"
-                          : "bg-red-500"
+                        profile.paymentStatus ? "bg-green-500" : "bg-red-500"
                       }`}
                     />
                     <p className="text-gray-700 dark:text-slate-200">
-                      Pago:{" "}
-                      {(user as any).paymentStatus ? "Al día" : "Pendiente"}
+                      Pago: {profile.paymentStatus ? "Al día" : "Pendiente"}
                     </p>
                   </div>
                 </div>
@@ -571,24 +605,15 @@ function UserProfile() {
                 <span>Tipo de Cuenta</span>
               </h4>
               <p className="bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 capitalize">
-                {user?.rol === "client"
+                {profile?.rol === "client"
                   ? "Cliente"
-                  : user?.rol === "provider"
+                  : profile?.rol === "provider"
                   ? "Proveedor"
-                  : user?.rol || "No especificado"}
+                  : profile?.rol || "No especificado"}
               </p>
             </div>
 
-            {/* Botón Editar Perfil */}
-            <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
-              <Link
-                to="/profile/edit"
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center space-x-2"
-              >
-                <FaEdit />
-                <span>Editar Perfil</span>
-              </Link>
-            </div>
+            {/* (El botón global “Editar Perfil” fue removido) */}
           </div>
         </div>
       </div>

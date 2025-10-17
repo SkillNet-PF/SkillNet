@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useAuthContext } from "../contexts/AuthContext";
 import { updateProviderProfile, uploadAvatar } from "../services/auth";
 import {
@@ -20,23 +20,53 @@ import {
 
 function ProviderProfile() {
   const { user, setUser } = useAuthContext();
+
+  // Normaliza el shape del usuario por si viene como { user }, { data } o directo
+  const profile: any =
+    (user as any)?.user || (user as any)?.data || user || null;
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [imgBust, setImgBust] = useState<number>(0);
 
   // Estados para edición inline
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValues, setTempValues] = useState({
-    name: "",
-    email: "",
-    birthDate: "",
-    address: "",
-    phone: "",
-    serviceType: "",
-    about: "",
-    days: "",
-    horarios: "",
+    name: profile?.name || "",
+    email: profile?.email || "",
+    birthDate: profile?.birthDate || "",
+    address: profile?.address || "",
+    phone: profile?.phone || "",
+    serviceType: profile?.serviceType || "",
+    about: profile?.about || "",
+    days: Array.isArray(profile?.dias)
+      ? profile.dias.join(", ")
+      : profile?.days || "",
+    horarios: Array.isArray(profile?.horarios)
+      ? profile.horarios.join(", ")
+      : profile?.horarios || "",
   });
   const [isSaving, setIsSaving] = useState(false);
+
+  // Resync cuando profile se hidrata
+  useEffect(() => {
+    if (!profile) return;
+    setTempValues({
+      name: profile?.name || "",
+      email: profile?.email || "",
+      birthDate: profile?.birthDate || "",
+      address: profile?.address || "",
+      phone: profile?.phone || "",
+      serviceType: profile?.serviceType || "",
+      about: profile?.about || "",
+      days: Array.isArray(profile?.dias)
+        ? profile.dias.join(", ")
+        : profile?.days || "",
+      horarios: Array.isArray(profile?.horarios)
+        ? profile.horarios.join(", ")
+        : profile?.horarios || "",
+    });
+  }, [profile]);
 
   // Formatear fechas para mostrar
   const formatDate = (dateString: string) => {
@@ -76,17 +106,21 @@ function ProviderProfile() {
     setIsUploading(true);
     try {
       const result = await uploadAvatar(file);
-      // Actualizar el usuario en el contexto con la nueva imagen
+      // Actualizar el usuario en el contexto con la nueva imagen (manteniendo el shape original)
       if (user) {
-        setUser({
-          ...user,
-          imgProfile: result.imgProfile,
-        });
+        const raw: any = user;
+        const next = raw?.user
+          ? { ...raw, user: { ...raw.user, imgProfile: result.imgProfile } }
+          : raw?.data
+          ? { ...raw, data: { ...raw.data, imgProfile: result.imgProfile } }
+          : { ...raw, imgProfile: result.imgProfile };
+        setUser(next);
+        setImgBust(Date.now()); // bust cache
       }
       alert("¡Imagen de perfil actualizada correctamente!");
     } catch (error: any) {
       alert(
-        `Error subiendo la imagen: ${error.message || "Error desconocido"}`
+        `Error subiendo la imagen: ${error?.message || "Error desconocido"}`
       );
     } finally {
       setIsUploading(false);
@@ -101,19 +135,19 @@ function ProviderProfile() {
   const startEditing = (field: string) => {
     setEditingField(field);
     setTempValues({
-      name: user?.name || "",
-      email: user?.email || "",
-      birthDate: user?.birthDate || "",
-      address: (user as any)?.address || "",
-      phone: (user as any)?.phone || "",
-      serviceType: (user as any)?.serviceType || "",
-      about: (user as any)?.about || "",
-      days: Array.isArray((user as any)?.dias)
-        ? (user as any).dias.join(", ")
-        : (user as any)?.days || "",
-      horarios: Array.isArray((user as any)?.horarios)
-        ? (user as any).horarios.join(", ")
-        : (user as any)?.horarios || "",
+      name: profile?.name || "",
+      email: profile?.email || "",
+      birthDate: profile?.birthDate || "",
+      address: profile?.address || "",
+      phone: profile?.phone || "",
+      serviceType: profile?.serviceType || "",
+      about: profile?.about || "",
+      days: Array.isArray(profile?.dias)
+        ? profile.dias.join(", ")
+        : profile?.days || "",
+      horarios: Array.isArray(profile?.horarios)
+        ? profile.horarios.join(", ")
+        : profile?.horarios || "",
     });
   };
 
@@ -121,44 +155,68 @@ function ProviderProfile() {
   const cancelEditing = () => {
     setEditingField(null);
     setTempValues({
-      name: "",
-      email: "",
-      birthDate: "",
-      address: "",
-      phone: "",
-      serviceType: "",
-      about: "",
-      days: "",
-      horarios: "",
+      name: profile?.name || "",
+      email: profile?.email || "",
+      birthDate: profile?.birthDate || "",
+      address: profile?.address || "",
+      phone: profile?.phone || "",
+      serviceType: profile?.serviceType || "",
+      about: profile?.about || "",
+      days: Array.isArray(profile?.dias)
+        ? profile.dias.join(", ")
+        : profile?.days || "",
+      horarios: Array.isArray(profile?.horarios)
+        ? profile.horarios.join(", ")
+        : profile?.horarios || "",
     });
   };
 
   // Guardar cambios
   const saveChanges = async () => {
-    if (!editingField || !user?.userId) return;
+    if (!editingField || !profile?.userId) return;
 
     setIsSaving(true);
     try {
       // Preparar los datos para enviar al API
-      const updates = {
+      const updates: Record<string, any> = {
         [editingField]: tempValues[editingField as keyof typeof tempValues],
       };
 
-      // Hacer la llamada al API para actualizar el proveedor
-      await updateProviderProfile(user.userId, updates);
+      // Normaliza a arreglo si tu API lo espera como array
+      if (editingField === "days") {
+        const parsed = updates.days
+          ?.split(",")
+          .map((s: string) => s.trim())
+          .filter(Boolean);
+        updates.days = parsed;
+      }
+      if (editingField === "horarios") {
+        const parsed = updates.horarios
+          ?.split(",")
+          .map((s: string) => s.trim())
+          .filter(Boolean);
+        updates.horarios = parsed;
+      }
 
-      // Actualizar el contexto local con los datos del servidor
-      setUser({
-        ...user,
-        [editingField]: tempValues[editingField as keyof typeof tempValues],
-      });
+      // Hacer la llamada al API para actualizar el proveedor
+      await updateProviderProfile(profile.userId, updates);
+
+      // Actualizar el contexto local respetando el shape original
+      const raw: any = user;
+      const next = raw?.user
+        ? { ...raw, user: { ...raw.user, ...updates } }
+        : raw?.data
+        ? { ...raw, data: { ...raw.data, ...updates } }
+        : { ...raw, ...updates };
+
+      setUser(next);
 
       setEditingField(null);
       alert("¡Campo actualizado correctamente!");
     } catch (error: any) {
       console.error("Error al actualizar el campo:", error);
       alert(
-        `Error al actualizar el campo: ${error.message || "Error desconocido"}`
+        `Error al actualizar el campo: ${error?.message || "Error desconocido"}`
       );
     } finally {
       setIsSaving(false);
@@ -173,7 +231,12 @@ function ProviderProfile() {
     }));
   };
 
-  if (!user) return <p>No se encontraron datos del proveedor.</p>;
+  if (!profile)
+    return (
+      <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
+        <p>Cargando perfil…</p>
+      </div>
+    );
 
   return (
     <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
@@ -207,8 +270,9 @@ function ProviderProfile() {
             <div className="relative w-32 h-32 mx-auto mb-4">
               <img
                 src={
-                  user?.imgProfile ||
-                  "https://via.placeholder.com/150/0000FF/FFFFFF?text=P"
+                  ((profile?.imgProfile || profile?.picture) ??
+                    "https://via.placeholder.com/150/0000FF/FFFFFF?text=P") +
+                  (imgBust ? `?v=${imgBust}` : "")
                 }
                 alt="Foto de Perfil"
                 className="w-full h-full rounded-full object-cover border-4 border-blue-600"
@@ -286,7 +350,7 @@ function ProviderProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700 font-medium">
-                    {user?.name || "No especificado"}
+                    {profile?.name || "No especificado"}
                   </p>
                   <button
                     onClick={() => startEditing("name")}
@@ -336,7 +400,7 @@ function ProviderProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700 truncate">
-                    {user?.email || "No especificado"}
+                    {profile?.email || "No especificado"}
                   </p>
                   <button
                     onClick={() => startEditing("email")}
@@ -387,8 +451,8 @@ function ProviderProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700">
-                    {user?.birthDate
-                      ? formatDate(user.birthDate)
+                    {profile?.birthDate
+                      ? formatDate(profile.birthDate)
                       : "No especificada"}
                   </p>
                   <button
@@ -441,7 +505,7 @@ function ProviderProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700">
-                    {(user as any)?.address || "No especificada"}
+                    {profile?.address || "No especificada"}
                   </p>
                   <button
                     onClick={() => startEditing("address")}
@@ -491,7 +555,7 @@ function ProviderProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700">
-                    {(user as any)?.phone || "No especificado"}
+                    {profile?.phone || "No especificado"}
                   </p>
                   <button
                     onClick={() => startEditing("phone")}
@@ -543,7 +607,7 @@ function ProviderProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700">
-                    {(user as any)?.serviceType || "No especificado"}
+                    {profile?.serviceType || "No especificado"}
                   </p>
                   <button
                     onClick={() => startEditing("serviceType")}
@@ -593,7 +657,7 @@ function ProviderProfile() {
               ) : (
                 <div className="flex justify-between items-start bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700 flex-1">
-                    {(user as any)?.about || "No especificado"}
+                    {profile?.about || "No especificado"}
                   </p>
                   <button
                     onClick={() => startEditing("about")}
@@ -643,9 +707,9 @@ function ProviderProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700">
-                    {Array.isArray((user as any)?.dias)
-                      ? (user as any).dias.join(", ")
-                      : (user as any)?.days || "No especificados"}
+                    {Array.isArray(profile?.dias)
+                      ? profile.dias.join(", ")
+                      : profile?.days || "No especificados"}
                   </p>
                   <button
                     onClick={() => startEditing("days")}
@@ -697,9 +761,9 @@ function ProviderProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700">
-                    {Array.isArray((user as any)?.horarios)
-                      ? (user as any).horarios.join(", ")
-                      : (user as any)?.horarios || "No especificados"}
+                    {Array.isArray(profile?.horarios)
+                      ? profile.horarios.join(", ")
+                      : profile?.horarios || "No especificados"}
                   </p>
                   <button
                     onClick={() => startEditing("horarios")}
@@ -721,11 +785,11 @@ function ProviderProfile() {
               <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg border">
                 <span
                   className={`w-3 h-3 rounded-full ${
-                    user?.isActive ? "bg-green-500" : "bg-red-500"
+                    profile?.isActive ? "bg-green-500" : "bg-red-500"
                   }`}
                 ></span>
                 <p className="text-gray-700">
-                  {user?.isActive ? "Activa" : "Inactiva"}
+                  {profile?.isActive ? "Activa" : "Inactiva"}
                 </p>
               </div>
             </div>
