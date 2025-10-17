@@ -1,14 +1,14 @@
 import { http } from "./http";
 import { AuthResponse, toFrontendRole } from "./types";
 
+const API_BASE =
+  (import.meta.env.VITE_API_URL as string) || "http://localhost:3002";
+
+/** ---------- Login / Token ---------- */
 export async function login(
   email: string,
   password: string
-): Promise<{
-  success: boolean;
-  role: "client" | "provider";
-  token?: string;
-}> {
+): Promise<{ success: boolean; role: "client" | "provider"; token?: string }> {
   try {
     const data = await http<AuthResponse>("/auth/login", {
       method: "POST",
@@ -17,7 +17,7 @@ export async function login(
     const role = toFrontendRole(data.user.rol);
     localStorage.setItem("accessToken", data.accessToken);
     return { success: true, role, token: data.accessToken };
-  } catch (err) {
+  } catch {
     return { success: false, role: "client" };
   }
 }
@@ -30,33 +30,43 @@ export function clearAuthToken() {
   localStorage.removeItem("accessToken");
 }
 
+export function logout() {
+  clearAuthToken();
+}
+
+/** ---------- Auth0 helpers ---------- */
 export function auth0RegisterUrl(
   role: "client" | "provider",
   connection?: "google-oauth2" | "github"
 ): string {
-  const base =
-    (import.meta as any).env?.VITE_API_URL || "http://localhost:3002";
   const startPath =
     role === "provider"
       ? `/auth/auth0/start/provider`
       : `/auth/auth0/start/client`;
   const qs = connection ? `?connection=${connection}` : "";
-  return `${base}${startPath}${qs}`;
+  return `${API_BASE}${startPath}${qs}`;
 }
 
+/** ---------- Usuario actual ---------- */
+export async function me(): Promise<any> {
+  // Si tu http() no agrega Authorization automáticamente, añade el header ahí.
+  return http<any>("/auth/me", { method: "GET" });
+}
+
+/** ---------- Avatar ---------- */
 export async function uploadAvatar(
   file: File
 ): Promise<{ user: any; imgProfile: string }> {
   const formData = new FormData();
   formData.append("avatar", file);
 
-  const token = localStorage.getItem("accessToken");
+  const token = getAuthToken();
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const response = await fetch("/api/auth/upload-avatar", {
+  const response = await fetch(`${API_BASE}/auth/upload-avatar`, {
     method: "POST",
-    headers,
+    headers, // no setear Content-Type con FormData
     body: formData,
   });
 
@@ -68,6 +78,7 @@ export async function uploadAvatar(
   return await response.json();
 }
 
+/** ---------- Update perfiles ---------- */
 export async function updateUserProfile(
   userId: string,
   updates: {
@@ -78,15 +89,10 @@ export async function updateUserProfile(
     phone?: string;
   }
 ): Promise<any> {
-  try {
-    const data = await http<any>(`/clients/profile/${userId}`, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    });
-    return data;
-  } catch (error) {
-    throw error;
-  }
+  return http<any>(`/clients/profile/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify(updates),
+  });
 }
 
 export async function updateProviderProfile(
@@ -103,13 +109,8 @@ export async function updateProviderProfile(
     horarios?: string;
   }
 ): Promise<any> {
-  try {
-    const data = await http<any>(`/serviceprovider/${providerId}`, {
-      method: "PATCH",
-      body: JSON.stringify(updates),
-    });
-    return data;
-  } catch (error) {
-    throw error;
-  }
+  return http<any>(`/serviceprovider/${providerId}`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
 }

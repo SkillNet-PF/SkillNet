@@ -25,7 +25,7 @@ function UserProfile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Estados para edición inline
+  // --- edición inline ---
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValues, setTempValues] = useState({
     name: "",
@@ -36,66 +36,45 @@ function UserProfile() {
   });
   const [isSaving, setIsSaving] = useState(false);
 
-  // Formatear fechas para mostrar
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("es-ES", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
-  };
 
-  // Manejar clic en el botón de cámara
-  const handleCameraClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleCameraClick = () => fileInputRef.current?.click();
 
-  // Manejar selección de archivo
   const handleFileSelect = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validar que sea una imagen
     if (!file.type.startsWith("image/")) {
       alert("Por favor selecciona un archivo de imagen válido.");
       return;
     }
-
-    // Validar tamaño (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert(
-        "El archivo es demasiado grande. Por favor selecciona una imagen menor a 5MB."
-      );
+      alert("La imagen debe ser menor a 5MB.");
       return;
     }
 
     setIsUploading(true);
     try {
       const result = await uploadAvatar(file);
-      // Actualizar el usuario en el contexto con la nueva imagen
       if (user) {
-        setUser({
-          ...user,
-          imgProfile: result.imgProfile,
-        });
+        setUser({ ...user, imgProfile: result.imgProfile });
       }
       alert("¡Imagen de perfil actualizada correctamente!");
     } catch (error: any) {
-      alert(
-        `Error subiendo la imagen: ${error.message || "Error desconocido"}`
-      );
+      alert(`Error subiendo la imagen: ${error?.message || "desconocido"}`);
     } finally {
       setIsUploading(false);
-      // Limpiar el input para permitir subir el mismo archivo de nuevo
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  // Iniciar edición de un campo
   const startEditing = (field: string) => {
     setEditingField(field);
     setTempValues({
@@ -107,82 +86,57 @@ function UserProfile() {
     });
   };
 
-  // Cancelar edición
   const cancelEditing = () => {
     setEditingField(null);
-    setTempValues({
-      name: "",
-      email: "",
-      birthDate: "",
-      address: "",
-      phone: "",
-    });
   };
 
-  // Guardar cambios
+  const handleInputChange = (field: string, value: string) => {
+    setTempValues((prev) => ({ ...prev, [field]: value }));
+  };
+
   const saveChanges = async () => {
     if (!editingField || !user?.userId) return;
-
     setIsSaving(true);
     try {
-      // Preparar los datos para enviar al API
       const updates = {
         [editingField]: tempValues[editingField as keyof typeof tempValues],
       };
-
-      // Hacer la llamada al API para actualizar el usuario
-      const updatedUser = await updateUserProfile(user.userId, updates);
-
-      // Actualizar el contexto local con los datos del servidor
-      setUser({
-        ...user,
-        [editingField]: tempValues[editingField as keyof typeof tempValues],
-      });
-
+      await updateUserProfile(user.userId, updates);
+      setUser({ ...user, ...updates });
       setEditingField(null);
       alert("¡Campo actualizado correctamente!");
-    } catch (error: any) {
-      console.error("Error al actualizar el campo:", error);
-      alert(
-        `Error al actualizar el campo: ${error.message || "Error desconocido"}`
-      );
+    } catch (e: any) {
+      alert(`Error al actualizar: ${e?.message || "desconocido"}`);
     } finally {
       setIsSaving(false);
     }
-  }; // Manejar cambio en input de edición
-  const handleInputChange = (field: string, value: string) => {
-    setTempValues((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
   };
 
   return (
-    <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-4xl font-extrabold text-blue-900 mb-8 border-b-4 border-yellow-400 pb-2">
+    <div className="container mx-auto p-6 min-h-screen profile-page bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
+      <h1 className="text-4xl font-extrabold text-blue-900 dark:text-blue-200 mb-8 border-b-4 border-yellow-400 pb-2 dark:border-yellow-400">
         Perfil de Usuario
       </h1>
 
-      {/* Layout Principal: Dos Columnas (Historial 2/3 | Datos 1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* ⬅️ LADO IZQUIERDO (2/3): Servicios Solicitados (Historial simple) */}
+        {/* IZQUIERDA: historial */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white p-6 rounded-xl shadow-lg">
-            <h3 className="text-2xl font-semibold text-blue-800 mb-4 border-b pb-2 flex items-center space-x-2">
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-6 rounded-xl shadow-lg">
+            <h3 className="text-2xl font-semibold text-blue-800 dark:text-blue-100 mb-4 border-b pb-2 dark:border-slate-700 flex items-center space-x-2">
               <FaClipboardList className="text-yellow-500" />
               <span>Historial de Solicitudes</span>
             </h3>
+
             <div className="space-y-4">
-              {/* Mostrar mensaje cuando no hay solicitudes */}
               {!user ||
               !(user as any).requests ||
               (user as any).requests?.length === 0 ? (
                 <div className="text-center py-8">
-                  <FaClipboardList className="mx-auto text-6xl text-gray-300 mb-4" />
-                  <p className="text-gray-500 text-lg">
+                  <FaClipboardList className="mx-auto text-6xl text-gray-300 dark:text-slate-600 mb-4" />
+                  <p className="text-gray-500 dark:text-slate-400 text-lg">
                     No tienes solicitudes de servicios aún
                   </p>
-                  <p className="text-gray-400 text-sm mt-2">
+                  <p className="text-gray-400 dark:text-slate-500 text-sm mt-2">
                     ¡Explora nuestros proveedores y solicita tu primer servicio!
                   </p>
                 </div>
@@ -190,21 +144,19 @@ function UserProfile() {
                 (user as any).requests.map((req: any) => (
                   <div
                     key={req.id}
-                    className="p-4 border rounded-lg flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition"
+                    className="p-4 border rounded-lg flex justify-between items-center bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-gray-200 dark:border-slate-700 transition"
                   >
-                    <div className="flex items-center space-x-3">
-                      <div>
-                        <p className="font-semibold text-lg text-blue-900">
-                          {req.service}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Fecha de solicitud: {req.date}
-                        </p>
-                      </div>
+                    <div>
+                      <p className="font-semibold text-lg text-blue-900 dark:text-blue-200">
+                        {req.service}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-slate-400">
+                        Fecha de solicitud: {req.date}
+                      </p>
                     </div>
                     <Link
                       to={`/request/${req.id}`}
-                      className="text-blue-600 hover:underline font-medium text-sm"
+                      className="text-blue-600 dark:text-blue-400 hover:underline font-medium text-sm"
                     >
                       Ver Detalles &rarr;
                     </Link>
@@ -212,10 +164,11 @@ function UserProfile() {
                 ))
               )}
             </div>
+
             <div className="mt-4 text-right">
               <Link
                 to="/requests"
-                className="text-blue-600 hover:underline font-medium"
+                className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
               >
                 Ver todo el historial &rarr;
               </Link>
@@ -223,10 +176,10 @@ function UserProfile() {
           </div>
         </div>
 
-        {/* ➡️ LADO DERECHO (1/3): Datos de Cuenta y Foto */}
+        {/* DERECHA: foto + datos */}
         <div className="lg:col-span-1 space-y-8">
-          {/* Sección 1: Foto de Perfil */}
-          <div className="bg-white p-6 rounded-xl shadow-lg text-center">
+          {/* Foto de perfil */}
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-6 rounded-xl shadow-lg text-center">
             <div className="relative w-28 h-28 mx-auto mb-4">
               <img
                 src={
@@ -239,7 +192,7 @@ function UserProfile() {
               <button
                 onClick={handleCameraClick}
                 disabled={isUploading}
-                className={`absolute bottom-0 right-0 p-2 rounded-full text-blue-900 transition shadow-md border-2 border-white ${
+                className={`absolute bottom-0 right-0 p-2 rounded-full text-blue-900 dark:text-slate-900 transition shadow-md border-2 border-white ${
                   isUploading
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-yellow-400 hover:bg-yellow-300 cursor-pointer"
@@ -252,7 +205,7 @@ function UserProfile() {
               </button>
             </div>
 
-            {/* Input file oculto */}
+            {/* input file oculto */}
             <input
               ref={fileInputRef}
               type="file"
@@ -262,22 +215,38 @@ function UserProfile() {
             />
 
             {isUploading && (
-              <p className="text-sm text-blue-600 mb-2">Subiendo imagen...</p>
+              <p className="text-sm text-blue-600 dark:text-blue-400 mb-2">
+                Subiendo imagen...
+              </p>
             )}
+
+            {/* Botón textual adicional */}
+            <button
+              onClick={handleCameraClick}
+              disabled={isUploading}
+              className={`text-sm hover:underline mt-1 block dark:text-blue-400 ${
+                isUploading
+                  ? "text-gray-400 cursor-not-allowed"
+                  : "text-blue-600 cursor-pointer"
+              }`}
+            >
+              {isUploading ? "Subiendo..." : "Cambiar Foto de Perfil"}
+            </button>
           </div>
 
-          {/* Sección 2: Datos de Cuenta */}
-          <div className="bg-white p-6 rounded-xl shadow-lg">
-            <h3 className="text-2xl font-semibold text-blue-800 mb-4 border-b pb-2">
+          {/* Datos de cuenta */}
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-6 rounded-xl shadow-lg">
+            <h3 className="text-2xl font-semibold text-blue-800 dark:text-blue-100 mb-4 border-b pb-2 dark:border-slate-700">
               Mis Datos de Cuenta
             </h3>
 
             {/* Nombre */}
             <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
                 <FaUser />
                 <span>Nombre Completo</span>
               </h4>
+
               {editingField === "name" ? (
                 <div className="space-y-2">
                   <input
@@ -307,13 +276,13 @@ function UserProfile() {
                   </div>
                 </div>
               ) : (
-                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
-                  <p className="text-gray-700 font-medium">
+                <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
+                  <p className="text-gray-700 dark:text-slate-200 font-medium">
                     {user?.name || "No especificado"}
                   </p>
                   <button
                     onClick={() => startEditing("name")}
-                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50 dark:hover:bg-slate-700"
                     title="Editar nombre"
                   >
                     <FaEdit />
@@ -322,12 +291,13 @@ function UserProfile() {
               )}
             </div>
 
-            {/* Correo Electrónico */}
+            {/* Email */}
             <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
                 <FaEnvelope />
                 <span>Correo Electrónico</span>
               </h4>
+
               {editingField === "email" ? (
                 <div className="space-y-2">
                   <input
@@ -357,13 +327,13 @@ function UserProfile() {
                   </div>
                 </div>
               ) : (
-                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
-                  <p className="text-gray-700 truncate">
+                <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
+                  <p className="text-gray-700 dark:text-slate-200 truncate">
                     {user?.email || "No especificado"}
                   </p>
                   <button
                     onClick={() => startEditing("email")}
-                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50 dark:hover:bg-slate-700"
                     title="Editar correo"
                   >
                     <FaEdit />
@@ -372,12 +342,13 @@ function UserProfile() {
               )}
             </div>
 
-            {/* Fecha de Nacimiento */}
+            {/* Fecha de nacimiento */}
             <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
                 <FaBirthdayCake />
                 <span>Fecha de Nacimiento</span>
               </h4>
+
               {editingField === "birthDate" ? (
                 <div className="space-y-2">
                   <input
@@ -427,10 +398,11 @@ function UserProfile() {
 
             {/* Dirección */}
             <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
                 <FaMapMarkerAlt />
                 <span>Dirección</span>
               </h4>
+
               {editingField === "address" ? (
                 <div className="space-y-2">
                   <input
@@ -479,10 +451,11 @@ function UserProfile() {
 
             {/* Teléfono */}
             <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
                 <FaPhone />
                 <span>Teléfono</span>
               </h4>
+
               {editingField === "phone" ? (
                 <div className="space-y-2">
                   <input
@@ -529,48 +502,48 @@ function UserProfile() {
 
             {/* Estado de la Cuenta */}
             <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
                 <FaCheckCircle />
                 <span>Estado de la Cuenta</span>
               </h4>
-              <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg border">
+              <div className="flex items-center space-x-2 bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
                 <span
                   className={`w-3 h-3 rounded-full ${
                     user?.isActive ? "bg-green-500" : "bg-red-500"
                   }`}
-                ></span>
-                <p className="text-gray-700">
+                />
+                <p className="text-gray-700 dark:text-slate-200">
                   {user?.isActive ? "Activa" : "Inactiva"}
                 </p>
               </div>
             </div>
 
-            {/* Servicios Disponibles */}
+            {/* Servicios disponibles */}
             {(user as any)?.servicesLeft !== undefined && (
               <div className="mb-4">
-                <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+                <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
                   <FaCreditCard />
                   <span>Servicios Disponibles</span>
                 </h4>
-                <p className="bg-blue-50 p-3 rounded-lg border border-blue-200 text-blue-700 font-semibold">
+                <p className="bg-blue-50 dark:bg-slate-800 p-3 rounded-lg border border-blue-200 dark:border-slate-700 text-blue-700 dark:text-blue-300 font-semibold">
                   {(user as any).servicesLeft} servicios restantes
                 </p>
               </div>
             )}
 
-            {/* Fechas de Suscripción */}
+            {/* Suscripción */}
             {(user as any)?.startDate && (user as any)?.endDate && (
               <div className="mb-4">
-                <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+                <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
                   <FaCalendarAlt />
                   <span>Suscripción</span>
                 </h4>
-                <div className="bg-gray-50 p-3 rounded-lg border space-y-2">
-                  <p className="text-gray-700">
+                <div className="bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 space-y-2">
+                  <p className="text-gray-700 dark:text-slate-200">
                     <span className="font-medium">Inicio:</span>{" "}
                     {formatDate((user as any).startDate)}
                   </p>
-                  <p className="text-gray-700">
+                  <p className="text-gray-700 dark:text-slate-200">
                     <span className="font-medium">Vencimiento:</span>{" "}
                     {formatDate((user as any).endDate)}
                   </p>
@@ -581,8 +554,8 @@ function UserProfile() {
                           ? "bg-green-500"
                           : "bg-red-500"
                       }`}
-                    ></span>
-                    <p className="text-gray-700">
+                    />
+                    <p className="text-gray-700 dark:text-slate-200">
                       Pago:{" "}
                       {(user as any).paymentStatus ? "Al día" : "Pendiente"}
                     </p>
@@ -591,19 +564,30 @@ function UserProfile() {
               </div>
             )}
 
-            {/* Rol del Usuario */}
+            {/* Rol */}
             <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
                 <FaUser />
                 <span>Tipo de Cuenta</span>
               </h4>
-              <p className="bg-gray-50 p-3 rounded-lg border text-gray-700 capitalize">
+              <p className="bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 capitalize">
                 {user?.rol === "client"
                   ? "Cliente"
                   : user?.rol === "provider"
                   ? "Proveedor"
                   : user?.rol || "No especificado"}
               </p>
+            </div>
+
+            {/* Botón Editar Perfil */}
+            <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
+              <Link
+                to="/profile/edit"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center space-x-2"
+              >
+                <FaEdit />
+                <span>Editar Perfil</span>
+              </Link>
             </div>
           </div>
         </div>

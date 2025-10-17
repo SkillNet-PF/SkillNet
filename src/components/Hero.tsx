@@ -1,9 +1,14 @@
 import { Link } from "react-router-dom"; // Importamos Link si necesitas que sean rutas
+import { useTheme } from "@mui/material/styles";
+import { alpha } from "@mui/material";
 
 function Hero() {
+  const theme = useTheme();
+  const heroBg = theme.palette.primary.dark; // Consistente con el brand
+  const shadow = alpha("#000", 0.25);
   return (
-    // CAMBIO DE FONDO: Usa un azul oscuro más consistente para el branding
-    <section className="flex flex-col items-center justify-center text-center py-28 md:py-36 px-6 bg-blue-900 text-white min-h-screen-70"> {/* Aumento el padding y la altura */}
+    // Fondo toma el color del tema para consistencia entre modos
+    <section style={{ backgroundColor: heroBg, boxShadow: `inset 0 -1px 0 ${shadow}` }} className="flex flex-col items-center justify-center text-center py-28 md:py-36 px-6 text-white min-h-screen-70">
       
       {/* Título Principal */}
       <h1 className="text-5xl md:text-6xl font-extrabold mb-5 drop-shadow-xl max-w-4xl">

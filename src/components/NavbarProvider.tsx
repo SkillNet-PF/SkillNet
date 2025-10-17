@@ -1,6 +1,8 @@
-import { FaUserCircle, FaSignOutAlt } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
+import { AppBar, Toolbar, Typography, Button, IconButton, Stack, Tooltip, Container } from "@mui/material";
+import { FaUserCircle, FaSignOutAlt, FaMoon, FaSun } from "react-icons/fa";
 import { useAuthContext } from "../contexts/AuthContext";
+import { useThemeMode } from "../ui";
 
 function NavbarProvider() {
 
@@ -12,42 +14,42 @@ function NavbarProvider() {
     navigate('/');
   };
 
+  const { mode, toggleMode } = useThemeMode();
+
   return (
-    <nav className="bg-blue-900 text-white shadow-lg">
-      <div className="container mx-auto px-6 py-3 flex justify-between items-center">
-        {/* Logo */}
+    <AppBar position="static" color="primary" enableColorOnDark>
+      <Container maxWidth="lg">
+        <Toolbar disableGutters sx={{ minHeight: 64, gap: 2 }}>
+          <Typography component={Link} to="/" variant="h6" color="inherit" sx={{ textDecoration: 'none', fontWeight: 700 }}>
+            SkillNet
+          </Typography>
 
-        <Link to="/" className="text-2xl font-bold cursor-pointer hover:text-yellow-300">
-          Skillnet
-        </Link>
+          <Stack direction="row" spacing={2} sx={{ marginLeft: 'auto' }} alignItems="center">
+            <Button component={Link} to="/agenda" color="inherit">Mi Agenda</Button>
 
-        <div className="flex items-center gap-6 md:gap-8">
-          {/* Links */}
-          <div className="hidden md:flex space-x-6">
-            <a href="/agenda" className="hover:text-yellow-300 transition text-lg">
-              Mi Agenda
-            </a>
-          </div>
+            <Tooltip title={mode === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}>
+              <IconButton color="inherit" onClick={toggleMode} aria-label="toggle theme">
+                {mode === 'light' ? <FaMoon /> : <FaSun />}
+              </IconButton>
+            </Tooltip>
 
+            <IconButton color="inherit" component={Link} to="/perfil" aria-label="profile">
+              <FaUserCircle />
+            </IconButton>
 
-          <div className="flex items-center space-x-6">
-
-            <button
+            <Button
               onClick={handleLogout}
-              className="flex items-center gap-2 text-base font-semibold bg-yellow-400 text-blue-900 hover:text-white transition"
+              variant="contained"
+              color="secondary"
+              startIcon={<FaSignOutAlt />}
+              sx={{ borderRadius: 9999 }}
             >
-              <FaSignOutAlt className="text-xl" />
               Salir
-            </button>
-
-            {/* Ícono de Perfil */}
-            <Link to="/perfil">
-              <FaUserCircle className="text-3xl text-white hover:text-yellow-400 transition" />
-            </Link>
-          </div>
-        </div>
-      </div>
-    </nav>
+            </Button>
+          </Stack>
+        </Toolbar>
+      </Container>
+    </AppBar>
   );
 }
 
