@@ -1,10 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { Box, Stack, TextField, Button, IconButton, InputAdornment, MenuItem, Alert, Typography, Paper } from "@mui/material";
+import {
+  Box,
+  Stack,
+  TextField,
+  Button,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Alert,
+  Typography,
+  Paper,
+} from "@mui/material";
 import { registerProvider } from "../services/providers";
 import { auth0RegisterUrl } from "../services/auth";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 function RegisterformProvider() {
   const [formData, setFormData] = useState({
@@ -102,6 +114,9 @@ function RegisterformProvider() {
       });
       localStorage.setItem("accessToken", res.accessToken);
       alert("Registro de proveedor completado ✅");
+
+      navigate("DashboardProvider");
+      // Redirigir al dashboard o página de éxito
     } catch (err: any) {
       setError(err?.message || "Error registrando proveedor");
     }
