@@ -1,7 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { Button, TextField, IconButton, InputAdornment, Alert, Typography, Box, Stack, Paper } from "@mui/material";
+import {
+  Button,
+  TextField,
+  IconButton,
+  InputAdornment,
+  Alert,
+  Typography,
+  Box,
+  Stack,
+  Paper,
+} from "@mui/material";
 import { login, auth0RegisterUrl } from "../services/auth";
 import { useAuthContext } from "../contexts/AuthContext";
 
@@ -19,7 +29,7 @@ function LoginForm() {
 
     try {
       const res = await login(email, password);
-      if (res.success) {
+      if (res?.success) {
         setRole(res.role === "client" ? "user" : res.role);
         navigate("/");
       } else {
@@ -44,7 +54,9 @@ function LoginForm() {
             label="Correo electrónico"
             placeholder="ejemplo@correo.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setEmail(e.target.value)
+            }
             fullWidth
             required
           />
@@ -55,7 +67,9 @@ function LoginForm() {
             label="Contraseña"
             placeholder="********"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setPassword(e.target.value)
+            }
             fullWidth
             required
             InputProps={{
@@ -65,9 +79,15 @@ function LoginForm() {
                     aria-label="toggle password visibility"
                     onClick={() => setShowPassword(!showPassword)}
                     edge="end"
-                    title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    title={
+                      showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                    }
                   >
-                    {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                    {showPassword ? (
+                      <FaEyeSlash size={18} />
+                    ) : (
+                      <FaEye size={18} />
+                    )}
                   </IconButton>
                 </InputAdornment>
               ),
@@ -84,6 +104,7 @@ function LoginForm() {
             Entrar
           </Button>
 
+          {/* OAuth CLIENTE */}
           <div className="grid grid-cols-2 gap-2">
             <Button
               component="a"
@@ -100,6 +121,7 @@ function LoginForm() {
                 Google
               </span>
             </Button>
+
             <Button
               component="a"
               href={auth0RegisterUrl("client", "github")}
@@ -117,8 +139,59 @@ function LoginForm() {
             </Button>
           </div>
 
-          <Typography align="center" variant="body2" color="text.secondary" className="mt-2">
-            ¿No tienes cuenta? <Link to="/register" className="text-blue-600 hover:underline">Crea una nueva</Link>
+          {/* OAuth PROVEEDOR (plegable mínimo) */}
+          <div className="text-center mt-2">
+            <details className="text-sm text-gray-600">
+              <summary className="cursor-pointer hover:text-blue-600">
+                ¿Eres proveedor de servicios? Haz clic aquí
+              </summary>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Button
+                  component="a"
+                  href={auth0RegisterUrl("provider", "google-oauth2")}
+                  variant="outlined"
+                  color="inherit"
+                  size="small"
+                >
+                  <span className="flex items-center gap-2">
+                    <img
+                      src="https://www.svgrepo.com/show/475656/google-color.svg"
+                      alt="Google"
+                      className="w-4 h-4"
+                    />
+                    Proveedor
+                  </span>
+                </Button>
+                <Button
+                  component="a"
+                  href={auth0RegisterUrl("provider", "github")}
+                  variant="outlined"
+                  color="inherit"
+                  size="small"
+                >
+                  <span className="flex items-center gap-2">
+                    <img
+                      src="https://www.svgrepo.com/show/512317/github-142.svg"
+                      alt="GitHub"
+                      className="w-4 h-4"
+                    />
+                    Proveedor
+                  </span>
+                </Button>
+              </div>
+            </details>
+          </div>
+
+          <Typography
+            align="center"
+            variant="body2"
+            color="text.secondary"
+            className="mt-2"
+          >
+            ¿No tienes cuenta?{" "}
+            <Link to="/register" className="text-blue-600 hover:underline">
+              Crea una nueva
+            </Link>
           </Typography>
         </Stack>
       </Box>
