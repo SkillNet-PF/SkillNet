@@ -8,6 +8,7 @@ import RegisterChoice from "./pages/RegisterChoice";
 import NavbarHandler from "./components/NavbarHandler";
 import UserProfile from "./pages/DashboardUser";
 import AuthCallback from "./pages/AuthCallback";
+import RequestAppointment from "./pages/RequestAppointment";
 import DashboardAdmin from "./pages/admin/DashboardAdmin";
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/admin/dashboard" element={<DashboardAdmin />} />
           <Route path="/perfil" element={<UserProfile />} /> 
+          <Route path="/solicitar" element={<RequestAppointment />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

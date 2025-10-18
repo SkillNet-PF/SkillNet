@@ -46,6 +46,8 @@ function RegisterformProvider() {
     specialChar: false,
   });
 
+  const navigate = useNavigate();
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -114,9 +116,7 @@ function RegisterformProvider() {
       });
       localStorage.setItem("accessToken", res.accessToken);
       alert("Registro de proveedor completado ✅");
-
-      navigate("DashboardProvider");
-      // Redirigir al dashboard o página de éxito
+      navigate("/perfil");
     } catch (err: any) {
       setError(err?.message || "Error registrando proveedor");
     }
