@@ -67,3 +67,49 @@ export async function uploadAvatar(
 
   return await response.json();
 }
+
+export async function updateUserProfile(
+  userId: string,
+  updates: {
+    name?: string;
+    email?: string;
+    birthDate?: string;
+    address?: string;
+    phone?: string;
+  }
+): Promise<any> {
+  try {
+    const data = await http<any>(`/clients/profile/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function updateProviderProfile(
+  providerId: string,
+  updates: {
+    name?: string;
+    email?: string;
+    birthDate?: string;
+    address?: string;
+    phone?: string;
+    serviceType?: string;
+    about?: string;
+    days?: string;
+    horarios?: string;
+  }
+): Promise<any> {
+  try {
+    const data = await http<any>(`/serviceprovider/${providerId}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}

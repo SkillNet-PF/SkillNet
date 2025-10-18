@@ -10,7 +10,6 @@ import UserProfile from "./pages/DashboardUser";
 import AuthCallback from "./pages/AuthCallback";
 import DashboardAdmin from "./pages/admin/DashboardAdmin";
 
-
 function App() {
   return (
     <Router>
@@ -33,3 +32,4 @@ function App() {
 }
 
 export default App;
+

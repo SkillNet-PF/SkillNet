@@ -1,7 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { Button, TextField, IconButton, InputAdornment, Alert, Typography, Box, Stack, Paper } from "@mui/material";
+import {
+  Button,
+  TextField,
+  IconButton,
+  InputAdornment,
+  Alert,
+  Typography,
+  Box,
+  Stack,
+  Paper,
+} from "@mui/material";
 import { login, auth0RegisterUrl } from "../services/auth";
 import { useAuthContext } from "../contexts/AuthContext";
 
@@ -19,7 +29,6 @@ function LoginForm() {
     lowercase: false,
     number: false,
     specialChar: false,
-
   });
 
   const validatePassword = (pwd: string) => {
@@ -29,7 +38,6 @@ function LoginForm() {
       lowercase: /[a-z]/.test(pwd),
       number: /[0-9]/.test(pwd),
       specialChar: /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
-
     });
   };
 
@@ -54,7 +62,6 @@ function LoginForm() {
       setError("Error al conectar con el servidor. Intenta nuevamente.");
     }
   };
-
 
   return (
     <Paper elevation={8} className="shadow-xl rounded-2xl p-8 w-full max-w-md">
@@ -94,7 +101,11 @@ function LoginForm() {
                     aria-label="toggle password visibility"
                     onClick={() => setShowPassword(!showPassword)}
                     edge="end"
-                    title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    title={
+                      showPassword
+                        ? "Ocultar contraseña"
+                        : "Mostrar contraseña"
+                    }
                   >
                     {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
                   </IconButton>
@@ -103,13 +114,23 @@ function LoginForm() {
             }}
           />
 
-         
+          {/* Requisitos de contraseña */}
           <Box className="mt-1 text-sm">
-            <Typography color={passwordChecks.minLength ? "green" : "error"}>• Al menos 6 caracteres</Typography>
-            <Typography color={passwordChecks.uppercase ? "green" : "error"}>• Una letra mayúscula</Typography>
-            <Typography color={passwordChecks.lowercase ? "green" : "error"}>• Una letra minúscula</Typography>
-            <Typography color={passwordChecks.number ? "green" : "error"}>• Un número</Typography>
-            <Typography color={passwordChecks.specialChar ? "green" : "error"}>• Un carácter especial (!@#$%^&*...)</Typography>
+            <Typography color={passwordChecks.minLength ? "green" : "error"}>
+              • Al menos 6 caracteres
+            </Typography>
+            <Typography color={passwordChecks.uppercase ? "green" : "error"}>
+              • Una letra mayúscula
+            </Typography>
+            <Typography color={passwordChecks.lowercase ? "green" : "error"}>
+              • Una letra minúscula
+            </Typography>
+            <Typography color={passwordChecks.number ? "green" : "error"}>
+              • Un número
+            </Typography>
+            <Typography color={passwordChecks.specialChar ? "green" : "error"}>
+              • Un carácter especial (!@#$%^&*...)
+            </Typography>
           </Box>
 
           {error && (
@@ -122,10 +143,11 @@ function LoginForm() {
             Entrar
           </Button>
 
+          {/* Botones OAuth para cliente */}
           <div className="grid grid-cols-2 gap-2">
             <Button
               component="a"
-              href={auth0RegisterUrl("client", "google-oauth2")}
+              href="http://localhost:3002/auth/auth0/start/client?connection=google-oauth2"
               variant="outlined"
               color="inherit"
             >
@@ -140,7 +162,7 @@ function LoginForm() {
             </Button>
             <Button
               component="a"
-              href={auth0RegisterUrl("client", "github")}
+              href="http://localhost:3002/auth/auth0/start/client?connection=github"
               variant="outlined"
               color="inherit"
             >
@@ -155,8 +177,57 @@ function LoginForm() {
             </Button>
           </div>
 
-          <Typography align="center" variant="body2" color="text.secondary" className="mt-2">
-            ¿No tienes cuenta? <Link to="/register" className="text-blue-600 hover:underline">Crea una nueva</Link>
+          {/* Sección para proveedores */}
+          <Box className="text-center mt-2">
+            <details className="text-sm text-gray-600">
+              <summary className="cursor-pointer hover:text-blue-600">
+                ¿Eres proveedor de servicios? Haz clic aquí
+              </summary>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Button
+                  component="a"
+                  href="http://localhost:3002/auth/auth0/start/provider?connection=google-oauth2"
+                  variant="outlined"
+                  color="primary"
+                >
+                  <span className="flex items-center gap-2 text-xs">
+                    <img
+                      src="https://www.svgrepo.com/show/475656/google-color.svg"
+                      alt="Google"
+                      className="w-4 h-4"
+                    />
+                    Proveedor
+                  </span>
+                </Button>
+                <Button
+                  component="a"
+                  href="http://localhost:3002/auth/auth0/start/provider?connection=github"
+                  variant="outlined"
+                  color="primary"
+                >
+                  <span className="flex items-center gap-2 text-xs">
+                    <img
+                      src="https://www.svgrepo.com/show/512317/github-142.svg"
+                      alt="GitHub"
+                      className="w-4 h-4"
+                    />
+                    Proveedor
+                  </span>
+                </Button>
+              </div>
+            </details>
+          </Box>
+
+          <Typography
+            align="center"
+            variant="body2"
+            color="text.secondary"
+            className="mt-2"
+          >
+            ¿No tienes cuenta?{" "}
+            <Link to="/register" className="text-blue-600 hover:underline">
+              Crea una nueva
+            </Link>
           </Typography>
         </Stack>
       </Box>
@@ -165,4 +236,3 @@ function LoginForm() {
 }
 
 export default LoginForm;
-
