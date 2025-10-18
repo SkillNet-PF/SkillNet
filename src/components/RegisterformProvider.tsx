@@ -19,8 +19,6 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 function RegisterformProvider() {
-  const navigate = useNavigate();
-
   const [formData, setFormData] = useState({
     name: "",
     birthDate: "",
@@ -39,6 +37,15 @@ function RegisterformProvider() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // ✅ Estado para validación dinámica de contraseña
+  const [passwordChecks, setPasswordChecks] = useState({
+    minLength: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    specialChar: false,
+  });
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -47,15 +54,28 @@ function RegisterformProvider() {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     setError("");
+
+    // Validación dinámica del password
+    if (name === "password") {
+      setPasswordChecks({
+        minLength: value.length >= 6,
+        uppercase: /[A-Z]/.test(value),
+        lowercase: /[a-z]/.test(value),
+        number: /[0-9]/.test(value),
+        specialChar: /[!@#$%^&*(),.?":{}|<>]/.test(value),
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (formData.password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
+    // 🚫 Validación final antes del envío
+    if (Object.values(passwordChecks).includes(false)) {
+      setError("La contraseña no cumple todos los requisitos.");
       return;
     }
+
     if (formData.password !== formData.confirmPassword) {
       setError("Las contraseñas no coinciden.");
       return;
@@ -86,7 +106,7 @@ function RegisterformProvider() {
         address: formData.address,
         phone: formData.phone,
         rol: "provider",
-        isActive: true, // Los nuevos proveedores están activos por defecto
+        isActive: true,
         serviceType: formData.serviceType,
         about: formData.about,
         days: formData.days,
@@ -178,6 +198,35 @@ function RegisterformProvider() {
             }}
           />
 
+          {/* ✅ Validaciones dinámicas del password */}
+          <Box className="mt-1 text-sm">
+            <Typography
+              color={passwordChecks.minLength ? "green" : "error"}
+            >
+              • Al menos 6 caracteres
+            </Typography>
+            <Typography
+              color={passwordChecks.uppercase ? "green" : "error"}
+            >
+              • Una letra mayúscula
+            </Typography>
+            <Typography
+              color={passwordChecks.lowercase ? "green" : "error"}
+            >
+              • Una letra minúscula
+            </Typography>
+            <Typography
+              color={passwordChecks.number ? "green" : "error"}
+            >
+              • Un número
+            </Typography>
+            <Typography
+              color={passwordChecks.specialChar ? "green" : "error"}
+            >
+              • Un carácter especial (!@#$%^&*...)
+            </Typography>
+          </Box>
+
           <TextField
             name="confirmPassword"
             type={showConfirmPassword ? "text" : "password"}
@@ -191,7 +240,9 @@ function RegisterformProvider() {
                 <InputAdornment position="end">
                   <IconButton
                     aria-label="toggle password visibility"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    onClick={() =>
+                      setShowConfirmPassword(!showConfirmPassword)
+                    }
                     edge="end"
                   >
                     {showConfirmPassword ? (

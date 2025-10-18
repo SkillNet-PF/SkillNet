@@ -34,27 +34,50 @@ function RegisterformUser() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [passwordChecks, setPasswordChecks] = useState({
+    minLength: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    specialChar: false,
+  });
+
   // ✅ Handler único compatible con todos los TextField (con o sin "select")
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name as keyof typeof prev]: value }));
+    setFormData({ ...formData, [name]: value });
     setError("");
+
+
+    if (name === "password") {
+      setPasswordChecks({
+        minLength: value.length >= 6,
+        uppercase: /[A-Z]/.test(value),
+        lowercase: /[a-z]/.test(value),
+        number: /[0-9]/.test(value),
+        specialChar: /[!@#$%^&*(),.?":{}|<>]/.test(value),
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validaciones básicas
-    if (formData.password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
+
+    if (Object.values(passwordChecks).includes(false)) {
+      setError("La contraseña no cumple todos los requisitos.");
       return;
     }
+
+    
     if (formData.password !== formData.confirmPassword) {
       setError("Las contraseñas no coinciden.");
       return;
     }
+
 
     if (!formData.subscription) {
       setError("Debes seleccionar una membresía.");
@@ -71,6 +94,7 @@ function RegisterformUser() {
       return;
     }
 
+
     try {
       const res = await registerUser({
         name: formData.name,
@@ -85,12 +109,16 @@ function RegisterformUser() {
         subscription: formData.subscription,
       });
 
+
+
       localStorage.setItem("accessToken", res.accessToken);
       alert("Registro de usuario completado ✅");
     } catch (err: any) {
       setError(err?.message || "Error registrando usuario");
     }
   };
+
+
 
   return (
     <Paper elevation={8} className="p-8 rounded-2xl shadow-lg max-w-md mx-auto">
@@ -167,6 +195,15 @@ function RegisterformUser() {
               ),
             }}
           />
+
+          {/* ✅ Validaciones en tiempo real */}
+          <Box className="mt-1 text-sm">
+            <Typography color={passwordChecks.minLength ? "green" : "error"}>• Al menos 6 caracteres</Typography>
+            <Typography color={passwordChecks.uppercase ? "green" : "error"}>• Una letra mayúscula</Typography>
+            <Typography color={passwordChecks.lowercase ? "green" : "error"}>• Una letra minúscula</Typography>
+            <Typography color={passwordChecks.number ? "green" : "error"}>• Un número</Typography>
+            <Typography color={passwordChecks.specialChar ? "green" : "error"}>• Un carácter especial (!@#$%^&*...)</Typography>
+          </Box>
 
           <TextField
             name="confirmPassword"
@@ -286,3 +323,4 @@ function RegisterformUser() {
 }
 
 export default RegisterformUser;
+
