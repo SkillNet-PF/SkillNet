@@ -19,7 +19,7 @@ import {
 } from "react-icons/fa";
 
 function ProviderProfile() {
-  const { user, setUser } = useAuthContext();
+  const { user, setUser, role } = useAuthContext();
 
   // Normaliza el shape del usuario por si viene como { user }, { data } o directo
   const profile: any =
@@ -240,8 +240,8 @@ function ProviderProfile() {
 
   return (
     <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-4xl font-extrabold text-blue-900 mb-8 border-b-4 border-yellow-400 pb-2">
-        Perfil de Proveedor
+      <h1 className="text-4xl font-extrabold text-blue-900 dark:text-blue-200 mb-8 border-b-4 border-yellow-400 pb-2 dark:border-yellow-400">
+        {role === "provider" ? "Perfil de proveedor" : "Perfil de cliente"}
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

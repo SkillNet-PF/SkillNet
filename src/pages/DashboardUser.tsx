@@ -21,7 +21,7 @@ import { useAuthContext } from "../contexts/AuthContext";
 import { uploadAvatar, updateUserProfile } from "../services/auth";
 
 function UserProfile() {
-  const { user, setUser } = useAuthContext();
+  const { user, setUser, role } = useAuthContext();
 
   // Normaliza el shape del usuario por si viene como { user }, { data } o directo
   const profile: any =
@@ -163,7 +163,7 @@ function UserProfile() {
   return (
     <div className="container mx-auto p-6 min-h-screen profile-page bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
       <h1 className="text-4xl font-extrabold text-blue-900 dark:text-blue-200 mb-8 border-b-4 border-yellow-400 pb-2 dark:border-yellow-400">
-        Perfil de cliente
+        {role === "provider" ? "Perfil de proveedor" : "Perfil de cliente"}
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
