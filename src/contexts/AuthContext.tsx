@@ -1,7 +1,5 @@
 "use client";
-
 import { createContext, useContext, useEffect, useState } from "react";
-// import { http } from "../services/http";
 import type { ReactNode } from "react";
 
 type Role = "visitor" | "user" | "provider";
@@ -16,12 +14,10 @@ interface AuthUser {
   birthDate?: string;
   address?: string;
   phone?: string;
-  // Campos específicos de cliente
   servicesLeft?: number;
   startDate?: string;
   endDate?: string;
   paymentStatus?: boolean;
-  // Campos específicos de proveedor
   serviceType?: string;
   about?: string;
   dias?: string[];
@@ -34,6 +30,7 @@ interface AuthContextType {
   logout: () => void;
   user: AuthUser | null;
   setUser: (u: AuthUser | null) => void;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,12 +38,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role>("visitor");
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Primer efecto: carga inicial
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
-    // Llamar al endpoint /auth/me para obtener datos del usuario
     import("../services/http").then(({ http }) => {
       http<{ user: AuthUser }>("/auth/me")
         .then((res) => {
@@ -56,15 +57,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
         .catch((err: any) => {
           console.error("Error obteniendo datos del usuario:", err);
-          // Solo hacer logout si es error de autenticación (401)
           if (err.status === 401) {
             localStorage.removeItem("accessToken");
             setRole("visitor");
             setUser(null);
           }
-        });
+        })
+        .finally(() => setLoading(false));
     });
   }, []);
+
+  // Segundo efecto: detecta nuevos tokens después del login
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token || user) return;
+
+    setLoading(true);
+    import("../services/http")
+      .then(({ http }) => http<{ user: AuthUser }>("/auth/me"))
+      .then((res) => {
+        const profile = res.user;
+        setUser(profile);
+        setRole(profile?.rol === "provider" ? "provider" : "user");
+      })
+      .catch((err: any) => {
+        console.error("Error refrescando datos del usuario:", err);
+        if (err.status === 401) {
+          localStorage.removeItem("accessToken");
+          setUser(null);
+          setRole("visitor");
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [localStorage.getItem("accessToken")]);
 
   const logout = () => {
     setRole("visitor");
@@ -72,8 +97,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("accessToken");
   };
 
+  // Pantalla de carga global
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", marginTop: "50px" }}>
+        Cargando perfil...
+      </div>
+    );
+  }
+
   return (
-    <AuthContext.Provider value={{ role, setRole, logout, user, setUser }}>
+    <AuthContext.Provider
+      value={{ role, setRole, logout, user, setUser, loading }}
+    >
       {children}
     </AuthContext.Provider>
   );

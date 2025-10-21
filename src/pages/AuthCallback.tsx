@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuthContext } from "../contexts/AuthContext";
 import { http } from "../services/http";
 
 function AuthCallback() {
-  const { setRole } = useAuthContext();
   const location = useLocation();
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -17,7 +15,7 @@ function AuthCallback() {
       try {
         const params = new URLSearchParams(location.search);
         const token = params.get("token");
-        const role = params.get("role");
+        const role = params.get("role"); // solo informativo
 
         if (!token) {
           setStatus("error");
@@ -26,23 +24,18 @@ function AuthCallback() {
           return;
         }
 
-        // Guardar token y rol
+        // Guardar token
         localStorage.setItem("accessToken", token);
-        if (role === "provider" || role === "client") {
-          setRole(role === "provider" ? "provider" : "user");
-          localStorage.setItem("userRole", role);
-        }
 
-        setMessage("Verificando usuario...");
-
-        // Verificar que el token funciona (backend en puerto 3002)
+        // Verificar que el token funcione
         await http<{ user: any }>("/auth/me");
 
+        // Mostrar mensaje y redirigir
         setStatus("success");
-        setMessage(`¡Bienvenido! Redirigiendo como ${role}...`);
+        setMessage(`¡Bienvenido! Redirigiendo como ${role || "usuario"}...`);
 
         setTimeout(() => {
-          navigate("/", { replace: true });
+          navigate("/", { replace: true }); // va al home, AuthContext se encargará de hidratar el user
         }, 1500);
       } catch (error) {
         console.error("Error en callback OAuth:", error);
@@ -53,7 +46,7 @@ function AuthCallback() {
     };
 
     handleAuth();
-  }, [location.search, navigate, setRole]);
+  }, [location.search, navigate]);
 
   return (
     <div

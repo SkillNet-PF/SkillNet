@@ -12,11 +12,11 @@ import {
   Stack,
   Paper,
 } from "@mui/material";
-import { login, auth0RegisterUrl } from "../services/auth";
+import { login, auth0RegisterUrl, me } from "../services/auth"; // 👈 añadimos `me`
 import { useAuthContext } from "../contexts/AuthContext";
 
 function LoginForm() {
-  const { setRole } = useAuthContext();
+  const { setUser, setRole } = useAuthContext(); // 👈 ahora usamos también setUser
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -29,7 +29,6 @@ function LoginForm() {
     lowercase: false,
     number: false,
     specialChar: false,
-
   });
 
   const validatePassword = (pwd: string) => {
@@ -39,7 +38,6 @@ function LoginForm() {
       lowercase: /[a-z]/.test(pwd),
       number: /[0-9]/.test(pwd),
       specialChar: /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
-
     });
   };
 
@@ -54,9 +52,17 @@ function LoginForm() {
 
     try {
       const res = await login(email, password);
+
       if (res?.success) {
-        setRole(res.role === "client" ? "user" : res.role);
-        navigate("/");
+        // Llamamos /auth/me inmediatamente después del login
+        const profileRes = await me();
+        const profile = profileRes.user;
+
+        // Actualizamos contexto global
+        setUser(profile);
+        setRole(profile?.rol === "provider" ? "provider" : "user");
+
+        navigate("/"); // 👈 redirige a la página que se le indique
       } else {
         setError("Credenciales inválidas. Intenta nuevamente.");
       }
@@ -64,7 +70,6 @@ function LoginForm() {
       setError("Error al conectar con el servidor. Intenta nuevamente.");
     }
   };
-
 
   return (
     <Paper elevation={8} className="shadow-xl rounded-2xl p-8 w-full max-w-md">
@@ -80,9 +85,7 @@ function LoginForm() {
             label="Correo electrónico"
             placeholder="ejemplo@correo.com"
             value={email}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setEmail(e.target.value)
-            }
+            onChange={(e) => setEmail(e.target.value)}
             fullWidth
             required
           />
@@ -121,13 +124,23 @@ function LoginForm() {
             }}
           />
 
-         
+          {/* Indicadores de validación */}
           <Box className="mt-1 text-sm">
-            <Typography color={passwordChecks.minLength ? "green" : "error"}>• Al menos 6 caracteres</Typography>
-            <Typography color={passwordChecks.uppercase ? "green" : "error"}>• Una letra mayúscula</Typography>
-            <Typography color={passwordChecks.lowercase ? "green" : "error"}>• Una letra minúscula</Typography>
-            <Typography color={passwordChecks.number ? "green" : "error"}>• Un número</Typography>
-            <Typography color={passwordChecks.specialChar ? "green" : "error"}>• Un carácter especial (!@#$%^&*...)</Typography>
+            <Typography color={passwordChecks.minLength ? "green" : "error"}>
+              • Al menos 6 caracteres
+            </Typography>
+            <Typography color={passwordChecks.uppercase ? "green" : "error"}>
+              • Una letra mayúscula
+            </Typography>
+            <Typography color={passwordChecks.lowercase ? "green" : "error"}>
+              • Una letra minúscula
+            </Typography>
+            <Typography color={passwordChecks.number ? "green" : "error"}>
+              • Un número
+            </Typography>
+            <Typography color={passwordChecks.specialChar ? "green" : "error"}>
+              • Un carácter especial (!@#$%^&*...)
+            </Typography>
           </Box>
 
           {error && (
@@ -175,7 +188,7 @@ function LoginForm() {
             </Button>
           </div>
 
-          {/* OAuth PROVEEDOR (plegable mínimo) */}
+          {/* OAuth PROVEEDOR */}
           <div className="text-center mt-2">
             <details className="text-sm text-gray-600">
               <summary className="cursor-pointer hover:text-blue-600">
@@ -236,4 +249,3 @@ function LoginForm() {
 }
 
 export default LoginForm;
-
