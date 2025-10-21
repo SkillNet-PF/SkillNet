@@ -51,10 +51,11 @@ export interface ProviderRegisterRequest {
   isActive: boolean; // Campo requerido por el backend
 
   // Campos específicos de ProviderRegisterDto
-  serviceType: string;
+  serviceType?: string;
   about: string; // Campo correcto (no "bio")
   days: string; // CSV e.g. "lunes,martes"
   horarios: string; // CSV e.g. "09:00,14:00"
+  categoryId?: string;
 }
 
 // ============== INTERFACES DE ENTIDADES ==============
@@ -86,6 +87,7 @@ export interface ProviderProfile {
   days?: string[];
   horarios?: string[];
   rating?: number;
+  category?: { categoryId: string; name: string; description?: string };
 }
 
 export function toFrontendRole(

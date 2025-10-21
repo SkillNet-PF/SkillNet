@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, ElementType } from "react";
 import { useAuthContext } from "../contexts/AuthContext";
 import { updateProviderProfile, uploadAvatar } from "../services/auth";
+import { getCategories, CategoryDto } from "../services/categories";
 import {
   FaEdit,
   FaEnvelope,
@@ -193,7 +194,7 @@ function ProviderProfile() {
     birthDate: profile?.birthDate?.split("T")[0] || "", // Asegura formato YYYY-MM-DD para input type="date"
     address: profile?.address || "",
     phone: profile?.phone || "",
-    serviceType: profile?.serviceType || "",
+    // serviceType eliminado de la UI; se usa categoría
     about: profile?.about || "",
     days: Array.isArray(profile?.dias)
       ? profile.dias.join(", ")
@@ -203,6 +204,8 @@ function ProviderProfile() {
       : profile?.horarios || "",
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [categoryId, setCategoryId] = useState<string>("");
 
   // Resync cuando profile se hidrata
   useEffect(() => {
@@ -213,7 +216,7 @@ function ProviderProfile() {
       birthDate: profile?.birthDate?.split("T")[0] || "",
       address: profile?.address || "",
       phone: profile?.phone || "",
-      serviceType: profile?.serviceType || "",
+      // serviceType eliminado de la UI
       about: profile?.about || "",
       days: Array.isArray(profile?.dias)
         ? profile.dias.join(", ")
@@ -222,6 +225,9 @@ function ProviderProfile() {
         ? profile.horarios.join(", ")
         : profile?.horarios || "",
     });
+    // Cargar categorías para selector
+    getCategories().then(setCategories).catch(() => setCategories([]));
+    setCategoryId(profile?.category?.categoryId || profile?.category?.CategoryID || "");
   }, [profile]);
 
   // Formatear fechas para mostrar
@@ -299,13 +305,21 @@ function ProviderProfile() {
   // Iniciar edición de un campo
   const startEditing = (field: string) => {
     setEditingField(field);
-    // Asegurarse de que el valor temporal es el correcto (incluyendo formato de fecha para input)
-    setTempValues((prev) => ({
-        ...prev,
-        [field]: field === 'birthDate' 
-            ? profile?.birthDate?.split("T")[0] || "" 
-            : prev[field as keyof typeof prev],
-    }));
+    setTempValues({
+      name: profile?.name || "",
+      email: profile?.email || "",
+      birthDate: profile?.birthDate || "",
+      address: profile?.address || "",
+      phone: profile?.phone || "",
+      // serviceType eliminado de la UI
+      about: profile?.about || "",
+      days: Array.isArray(profile?.dias)
+        ? profile.dias.join(", ")
+        : profile?.days || "",
+      horarios: Array.isArray(profile?.horarios)
+        ? profile.horarios.join(", ")
+        : profile?.horarios || "",
+    });
   };
 
   // Cancelar edición
@@ -313,19 +327,19 @@ function ProviderProfile() {
     setEditingField(null);
     // Resetea todos los tempValues a los valores del perfil
     setTempValues({
-        name: profile?.name || "",
-        email: profile?.email || "",
-        birthDate: profile?.birthDate?.split("T")[0] || "",
-        address: profile?.address || "",
-        phone: profile?.phone || "",
-        serviceType: profile?.serviceType || "",
-        about: profile?.about || "",
-        days: Array.isArray(profile?.dias)
-            ? profile.dias.join(", ")
-            : profile?.days || "",
-        horarios: Array.isArray(profile?.horarios)
-            ? profile.horarios.join(", ")
-            : profile?.horarios || "",
+      name: profile?.name || "",
+      email: profile?.email || "",
+      birthDate: profile?.birthDate || "",
+      address: profile?.address || "",
+      phone: profile?.phone || "",
+      // serviceType eliminado de la UI
+      about: profile?.about || "",
+      days: Array.isArray(profile?.dias)
+        ? profile.dias.join(", ")
+        : profile?.days || "",
+      horarios: Array.isArray(profile?.horarios)
+        ? profile.horarios.join(", ")
+        : profile?.horarios || "",
     });
   };
 
@@ -414,43 +428,18 @@ function ProviderProfile() {
   const isProvider = role === "provider";
 
   return (
-    <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
-      {/* HEADER PRINCIPAL */}
-      <div className={`py-4 px-6 mb-8 rounded-xl shadow-lg ${isProvider ? 'bg-blue-900 text-white' : 'bg-white text-gray-800'}`}>
-        <h1 className="text-3xl font-extrabold flex items-center space-x-3">
-          <FaUser />
-          <span>{isProvider ? "  Perfil de Proveedor" : "Perfil de Cliente"}</span>
-        </h1>
-        {isProvider && <p className="text-blue-200 mt-1">Gestión y visibilidad de tu cuenta de servicios.</p>}
-      </div>
-      
+    <div className="container mx-auto p-6 bg-gray-50 dark:bg-slate-900 dark:text-slate-100 min-h-screen">
+      <h1 className="text-4xl font-extrabold text-blue-900 mb-8 border-b-4 border-yellow-400 pb-2">
+        Perfil de Proveedor
+      </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* COLUMNA IZQUIERDA (Para PROVEEDORES: Estadísticas y Sobre mí) */}
-        {isProvider && (
-            <div className="lg:col-span-2 space-y-8">
-                {/* 1. SECCIÓN DE ESTADÍSTICAS CLAVE (Similar a la imagen) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <StatCard 
-                        title="Valoración promedio" 
-                        value={`${profile.rating || "4.5"}/5`} 
-                        icon={FaStar} 
-                        color="text-yellow-600" 
-                    />
-                    <StatCard 
-                        title="Servicios Activos" 
-                        value={profile.activeServices || "4"} 
-                        icon={FaCog} 
-                        color="text-green-600" 
-                    />
-                    <StatCard 
-                        title="Citas Próximas" 
-                        value={profile.pendingAppointments || "12"} 
-                        icon={FaClock} 
-                        color="text-red-600" 
-                    />
-                </div>
+        {/* Columna izquierda: Historial/Actividad */}
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg">
+          <h2 className="text-3xl font-bold text-blue-800 mb-6 flex items-center space-x-3">
+            <FaClipboardList className="text-yellow-500" />
+            <span>Panel de Actividad</span>
+          </h2>
 
                 {/* 2. ACERCA DE MÍ (con edición) */}
                 <div className="bg-white p-6 rounded-xl shadow-lg">
@@ -458,77 +447,13 @@ function ProviderProfile() {
                         <FaInfoCircle className="text-yellow-500" />
                         <span>Información de Servicio</span>
                     </h2>
-
-                    <EditableField
-                        icon={FaCog}
-                        title="Tipo de Servicio"
-                        field="serviceType"
-                        currentValue={profile?.serviceType}
-                        editingField={editingField}
-                        tempValues={tempValues}
-                        startEditing={startEditing}
-                        handleInputChange={handleInputChange}
-                        saveChanges={saveChanges}
-                        cancelEditing={cancelEditing}
-                        isSaving={isSaving}
-                        placeholder="Ej: Plomería, Electricidad, Jardinería"
-                    />
-
-                    <EditableField
-                        icon={FaInfoCircle}
-                        title="Acerca de mí (Descripción)"
-                        field="about"
-                        currentValue={profile?.about}
-                        editingField={editingField}
-                        tempValues={tempValues}
-                        startEditing={startEditing}
-                        handleInputChange={handleInputChange}
-                        saveChanges={saveChanges}
-                        cancelEditing={cancelEditing}
-                        isSaving={isSaving}
-                        isTextArea={true}
-                        placeholder="Cuéntanos sobre tu experiencia y especialidades."
-                    />
-
-                    <EditableField
-                        icon={FaClipboardList}
-                        title="Días de atención"
-                        field="days"
-                        currentValue={Array.isArray(profile?.dias) ? profile.dias.join(", ") : profile?.days}
-                        editingField={editingField}
-                        tempValues={tempValues}
-                        startEditing={startEditing}
-                        handleInputChange={handleInputChange}
-                        saveChanges={saveChanges}
-                        cancelEditing={cancelEditing}
-                        isSaving={isSaving}
-                        placeholder="Ej: Lunes, Miércoles, Viernes"
-                    />
-
-                    <EditableField
-                        icon={FaClock}
-                        title="Horarios"
-                        field="horarios"
-                        currentValue={Array.isArray(profile?.horarios) ? profile.horarios.join(", ") : profile?.horarios}
-                        editingField={editingField}
-                        tempValues={tempValues}
-                        startEditing={startEditing}
-                        handleInputChange={handleInputChange}
-                        saveChanges={saveChanges}
-                        cancelEditing={cancelEditing}
-                        isSaving={isSaving}
-                        placeholder="Ej: 09:00 - 18:00"
-                    />
                 </div>
-            </div>
-        )}
-        
-        {/* COLUMNA DERECHA (Datos de Cuenta y Foto - Siempre Visible) */}
-        <div className={isProvider ? "space-y-6" : "lg:col-span-3 space-y-6"}>
-          
-          {/* FOTO DE PERFIL */}
-          <div className="bg-white p-6 rounded-xl shadow-lg text-center border-t-4 border-yellow-400">
-            <div className="relative w-36 h-36 mx-auto mb-4">
+
+        {/* Columna derecha: Perfil del usuario */}
+        <div className="space-y-6">
+          {/* Sección 1: Foto de Perfil */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg text-center">
+            <div className="relative w-32 h-32 mx-auto mb-4">
               <img
                 src={
                   ((profile?.imgProfile || profile?.picture) ??
@@ -553,6 +478,7 @@ function ProviderProfile() {
                 <FaCamera className="text-md" />
               </button>
             </div>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -567,11 +493,10 @@ function ProviderProfile() {
             <p className="text-sm text-gray-500 capitalize">{profile.email} - Rol: {role}</p>
           </div>
 
-          {/* DATOS DE CONTACTO Y PERSONALES */}
-          <div className="bg-white p-6 rounded-xl shadow-lg">
-            <h3 className="text-2xl font-semibold text-blue-800 mb-2 flex items-center space-x-2 border-b pb-2">
-                <FaUser className="text-yellow-500" />
-                <span>Datos Personales y Contacto</span>
+          {/* Sección 2: Datos de Cuenta */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg">
+            <h3 className="text-2xl font-semibold text-blue-800 mb-4 border-b pb-2">
+              Mis Datos de Cuenta
             </h3>
 
             <EditableField
@@ -652,23 +577,249 @@ function ProviderProfile() {
                 inputType="date"
             />
 
-            {/* Estado de la Cuenta (Solo Visualización) */}
-            <div className="p-4 border-b border-gray-100 last:border-b-0">
-                <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-3 mb-2">
-                    <FaCheckCircle className="text-blue-500" />
-                    <span>Estado de la Cuenta</span>
-                </h4>
-                <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <span
-                        className={`w-3 h-3 rounded-full ${
-                            profile?.isActive ? "bg-green-500" : "bg-red-500"
-                        }`}
-                        title={profile?.isActive ? "Cuenta Activa" : "Cuenta Inactiva"}
-                    />
-                    <p className="text-gray-700 font-medium">
-                        {profile?.isActive ? "Activa" : "Inactiva/Pendiente de Validación"}
-                    </p>
+            {/* Tipo de servicio eliminado: se muestra categoría */}
+            <div className="mb-4">
+              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+                <FaCog />
+                <span>Categoría</span>
+              </h4>
+              {editingField === "category" ? (
+                <div className="space-y-2">
+                  <select
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Selecciona una categoría</option>
+                    {categories.map((c) => (
+                      <option key={c.categoryId} value={c.categoryId}>{c.name}</option>
+                    ))}
+                  </select>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={async () => {
+                        setIsSaving(true);
+                        try {
+                          await updateProviderProfile(profile.userId, { categoryId });
+                          const raw: any = user;
+                          const next = raw?.user
+                            ? { ...raw, user: { ...raw.user, category: { categoryId, name: categories.find(c=>c.categoryId===categoryId)?.name || '' } } }
+                            : raw?.data
+                            ? { ...raw, data: { ...raw.data, category: { categoryId, name: categories.find(c=>c.categoryId===categoryId)?.name || '' } } }
+                            : { ...raw, category: { categoryId, name: categories.find(c=>c.categoryId===categoryId)?.name || '' } };
+                          setUser(next);
+                          setEditingField(null);
+                          alert("¡Categoría actualizada!");
+                        } catch (e:any) {
+                          alert(e?.message || "Error actualizando categoría");
+                        } finally {
+                          setIsSaving(false);
+                        }
+                      }}
+                      disabled={isSaving || !categoryId}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaSave />
+                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      disabled={isSaving}
+                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaTimes />
+                      <span>Cancelar</span>
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                  <p className="text-gray-700">
+                    {profile?.category?.name || "Sin categoría"}
+                  </p>
+                  <button
+                    onClick={() => setEditingField("category")}
+                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
+                    title="Editar categoría"
+                  >
+                    <FaEdit />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Acerca de mí */}
+            <div className="mb-4">
+              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+                <FaInfoCircle />
+                <span>Acerca de mí</span>
+              </h4>
+              {editingField === "about" ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={tempValues.about}
+                    onChange={(e) => handleInputChange("about", e.target.value)}
+                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Cuéntanos sobre tu experiencia y servicios..."
+                    rows={3}
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={saveChanges}
+                      disabled={isSaving}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaSave />
+                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      disabled={isSaving}
+                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaTimes />
+                      <span>Cancelar</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-start bg-gray-50 p-3 rounded-lg border">
+                  <p className="text-gray-700 flex-1">
+                    {profile?.about || "No especificado"}
+                  </p>
+                  <button
+                    onClick={() => startEditing("about")}
+                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50 ml-2"
+                    title="Editar descripción"
+                  >
+                    <FaEdit />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Días de atención */}
+            <div className="mb-4">
+              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+                <FaClipboardList />
+                <span>Días de atención</span>
+              </h4>
+              {editingField === "days" ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={tempValues.days}
+                    onChange={(e) => handleInputChange("days", e.target.value)}
+                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ej: Lunes, Miércoles, Viernes"
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={saveChanges}
+                      disabled={isSaving}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaSave />
+                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      disabled={isSaving}
+                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaTimes />
+                      <span>Cancelar</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                  <p className="text-gray-700">
+                    {Array.isArray(profile?.dias)
+                      ? profile.dias.join(", ")
+                      : profile?.days || "No especificados"}
+                  </p>
+                  <button
+                    onClick={() => startEditing("days")}
+                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
+                    title="Editar días"
+                  >
+                    <FaEdit />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Horarios */}
+            <div className="mb-4">
+              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+                <FaClock />
+                <span>Horarios</span>
+              </h4>
+              {editingField === "horarios" ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={tempValues.horarios}
+                    onChange={(e) =>
+                      handleInputChange("horarios", e.target.value)
+                    }
+                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ej: 09:00 - 18:00"
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={saveChanges}
+                      disabled={isSaving}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaSave />
+                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      disabled={isSaving}
+                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                    >
+                      <FaTimes />
+                      <span>Cancelar</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                  <p className="text-gray-700">
+                    {Array.isArray(profile?.horarios)
+                      ? profile.horarios.join(", ")
+                      : profile?.horarios || "No especificados"}
+                  </p>
+                  <button
+                    onClick={() => startEditing("horarios")}
+                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
+                    title="Editar horarios"
+                  >
+                    <FaEdit />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Estado de la Cuenta */}
+            <div className="mb-4">
+              <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+                <FaCheckCircle />
+                <span>Estado de la Cuenta</span>
+              </h4>
+              <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg border">
+                <span
+                  className={`w-3 h-3 rounded-full ${
+                    profile?.isActive ? "bg-green-500" : "bg-red-500"
+                  }`}
+                ></span>
+                <p className="text-gray-700">
+                  {profile?.isActive ? "Activa" : "Inactiva"}
+                </p>
+              </div>
             </div>
             
           </div>
