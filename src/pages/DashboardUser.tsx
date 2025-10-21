@@ -20,6 +20,14 @@ import { Link } from "react-router-dom";
 import { useAuthContext } from "../contexts/AuthContext";
 import { uploadAvatar, updateUserProfile } from "../services/auth";
 
+// SWEETALERT2 helpers
+import {
+  showLoading,
+  closeLoading,
+  alertSuccess,
+  alertError,
+} from "../ui/alerts";
+
 function UserProfile() {
   const { user, setUser, role } = useAuthContext();
 
@@ -41,6 +49,16 @@ function UserProfile() {
     phone: profile?.phone || "",
   });
   const [isSaving, setIsSaving] = useState(false);
+
+  // Validadores simples
+  const isNonEmpty = (v: string) => v.trim().length > 0;
+  const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const isValidPhone = (v: string) => /^\+?\d{7,15}$/.test(v.trim());
+  const isValidDate = (v: string) => {
+    if (!v) return false;
+    const d = new Date(v);
+    return !Number.isNaN(d.getTime()) && d <= new Date();
+  };
 
   // Re-sincroniza tempValues cuando se hidrata/cambia el profile
   useEffect(() => {
@@ -69,17 +87,23 @@ function UserProfile() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validaciones con SweetAlert2
     if (!file.type.startsWith("image/")) {
-      alert("Por favor selecciona un archivo de imagen válido.");
-      return;
+      return alertError(
+        "Archivo inválido",
+        "Selecciona una imagen (PNG/JPG/WEBP)."
+      );
     }
     if (file.size > 5 * 1024 * 1024) {
-      alert("La imagen debe ser menor a 5MB.");
-      return;
+      return alertError(
+        "Archivo muy grande",
+        "La imagen debe ser menor a 5 MB."
+      );
     }
 
     setIsUploading(true);
     try {
+      showLoading("Subiendo imagen...");
       // tu servicio actual devuelve { imgProfile }
       const result = await uploadAvatar(file);
 
@@ -95,10 +119,17 @@ function UserProfile() {
         setUser(next);
         setImgBust(Date.now()); // fuerza que el <img> no use caché
       }
-      alert("¡Imagen de perfil actualizada correctamente!");
+      await alertSuccess(
+        "¡Imagen actualizada!",
+        "Tu foto de perfil se guardó correctamente."
+      );
     } catch (error: any) {
-      alert(`Error subiendo la imagen: ${error?.message || "desconocido"}`);
+      await alertError(
+        "No se pudo subir la imagen",
+        error?.message || "Inténtalo más tarde."
+      );
     } finally {
+      closeLoading();
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -125,11 +156,36 @@ function UserProfile() {
 
   const saveChanges = async () => {
     if (!editingField || !profile?.userId) return;
+
+    // Validaciones por campo antes de guardar
+    const value = tempValues[editingField as keyof typeof tempValues] as string;
+
+    if (editingField === "name" && !isNonEmpty(value)) {
+      return alertError("Validación", "El nombre no puede estar vacío.");
+    }
+    if (editingField === "email" && !isValidEmail(value)) {
+      return alertError("Validación", "Ingresa un correo electrónico válido.");
+    }
+    if (editingField === "phone" && !isValidPhone(value)) {
+      return alertError(
+        "Validación",
+        "El teléfono debe tener 7 a 15 dígitos (puede incluir +)."
+      );
+    }
+    if (editingField === "birthDate" && !isValidDate(value)) {
+      return alertError(
+        "Validación",
+        "Selecciona una fecha válida (no futura)."
+      );
+    }
+    if (editingField === "address" && !isNonEmpty(value)) {
+      return alertError("Validación", "La dirección no puede estar vacía.");
+    }
+
     setIsSaving(true);
     try {
-      const updates = {
-        [editingField]: tempValues[editingField as keyof typeof tempValues],
-      };
+      showLoading("Guardando cambios...");
+      const updates = { [editingField]: value };
 
       await updateUserProfile(profile.userId, updates);
 
@@ -143,10 +199,14 @@ function UserProfile() {
 
       setUser(next);
       setEditingField(null);
-      alert("¡Campo actualizado correctamente!");
+      await alertSuccess("¡Listo!", "Campo actualizado correctamente.");
     } catch (e: any) {
-      alert(`Error al actualizar: ${e?.message || "desconocido"}`);
+      await alertError(
+        "No se pudo actualizar",
+        e?.message || "Inténtalo más tarde."
+      );
     } finally {
+      closeLoading();
       setIsSaving(false);
     }
   };
@@ -268,7 +328,6 @@ function UserProfile() {
                 Subiendo imagen...
               </p>
             )}
-            {/* (El botón textual “Cambiar Foto de Perfil” fue removido) */}
           </div>
 
           {/* Datos de cuenta */}
@@ -612,8 +671,6 @@ function UserProfile() {
                   : profile?.rol || "No especificado"}
               </p>
             </div>
-
-            {/* (El botón global “Editar Perfil” fue removido) */}
           </div>
         </div>
       </div>

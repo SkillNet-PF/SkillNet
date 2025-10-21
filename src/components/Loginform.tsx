@@ -12,11 +12,20 @@ import {
   Stack,
   Paper,
 } from "@mui/material";
-import { login, auth0RegisterUrl, me } from "../services/auth"; // 👈 añadimos `me`
+import { login, auth0RegisterUrl, me } from "../services/auth";
 import { useAuthContext } from "../contexts/AuthContext";
 
+// 👇 SweetAlert2 helpers
+import {
+  showLoading,
+  closeLoading,
+  alertError,
+  alertSuccess,
+  toast,
+} from "../ui/alerts";
+
 function LoginForm() {
-  const { setUser, setRole } = useAuthContext(); // 👈 ahora usamos también setUser
+  const { setUser, setRole } = useAuthContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,6 +40,7 @@ function LoginForm() {
     specialChar: false,
   });
 
+  // Función para validar la contraseña en tiempo real
   const validatePassword = (pwd: string) => {
     setPasswordChecks({
       minLength: pwd.length >= 6,
@@ -45,29 +55,53 @@ function LoginForm() {
     e.preventDefault();
     setError("");
 
+    // Validaciones previas al login
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+    if (!emailRe.test(email)) {
+      const msg = "Por favor ingresa un correo electrónico válido.";
+      setError(msg);
+      alertError("Correo inválido", msg);
+      return;
+    }
+    if (!password) {
+      const msg = "Ingresa tu contraseña.";
+      setError(msg);
+      alertError("Campo requerido", msg);
+      return;
+    }
     if (Object.values(passwordChecks).includes(false)) {
-      setError("La contraseña no cumple todos los requisitos.");
+      const msg = "La contraseña no cumple todos los requisitos.";
+      setError(msg);
+      alertError("Contraseña inválida", msg);
       return;
     }
 
     try {
+      showLoading("Iniciando sesión...");
       const res = await login(email, password);
 
       if (res?.success) {
-        // Llamamos /auth/me inmediatamente después del login
+        // Trae el perfil y llena el contexto
         const profileRes = await me();
         const profile = profileRes.user;
 
-        // Actualizamos contexto global
         setUser(profile);
         setRole(profile?.rol === "provider" ? "provider" : "user");
 
-        navigate("/"); // 👈 redirige a la página que se le indique
+        closeLoading();
+        toast("Sesión iniciada", "success");
+        navigate("/"); // ajusta si tienes un dashboard específico
       } else {
-        setError("Credenciales inválidas. Intenta nuevamente.");
+        const msg = "Credenciales inválidas. Intenta nuevamente.";
+        setError(msg);
+        alertError("No pudimos iniciar sesión", msg);
+        closeLoading();
       }
-    } catch {
-      setError("Error al conectar con el servidor. Intenta nuevamente.");
+    } catch (err: any) {
+      closeLoading();
+      const msg =
+        err?.userMessage || "No pudimos iniciar sesión. Inténtalo nuevamente.";
+      setError(msg);
     }
   };
 
@@ -186,49 +220,6 @@ function LoginForm() {
                 GitHub
               </span>
             </Button>
-          </div>
-
-          {/* OAuth PROVEEDOR */}
-          <div className="text-center mt-2">
-            <details className="text-sm text-gray-600">
-              <summary className="cursor-pointer hover:text-blue-600">
-                ¿Eres proveedor de servicios? Haz clic aquí
-              </summary>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <Button
-                  component="a"
-                  href={auth0RegisterUrl("provider", "google-oauth2")}
-                  variant="outlined"
-                  color="inherit"
-                  size="small"
-                >
-                  <span className="flex items-center gap-2">
-                    <img
-                      src="https://www.svgrepo.com/show/475656/google-color.svg"
-                      alt="Google"
-                      className="w-4 h-4"
-                    />
-                    Proveedor
-                  </span>
-                </Button>
-                <Button
-                  component="a"
-                  href={auth0RegisterUrl("provider", "github")}
-                  variant="outlined"
-                  color="inherit"
-                  size="small"
-                >
-                  <span className="flex items-center gap-2">
-                    <img
-                      src="https://www.svgrepo.com/show/512317/github-142.svg"
-                      alt="GitHub"
-                      className="w-4 h-4"
-                    />
-                    Proveedor
-                  </span>
-                </Button>
-              </div>
-            </details>
           </div>
 
           <Typography

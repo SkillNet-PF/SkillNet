@@ -16,8 +16,19 @@ import {
 } from "@mui/material";
 import { registerUser } from "../services/clients";
 import { auth0RegisterUrl } from "../services/auth";
+import { useNavigate } from "react-router-dom";
+
+// SweetAlert2 helpers
+import {
+  showLoading,
+  closeLoading,
+  alertSuccess,
+  alertError,
+} from "../ui/alerts";
 
 function RegisterformUser() {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: "",
     birthDate: "",
@@ -42,14 +53,12 @@ function RegisterformUser() {
     specialChar: false,
   });
 
-  // ✅ Handler único compatible con todos los TextField (con o sin "select")
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
     setError("");
-
 
     if (name === "password") {
       setPasswordChecks({
@@ -65,37 +74,68 @@ function RegisterformUser() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validaciones básicas
+    // Validaciones previas al registro
+    if (!formData.name || !formData.email || !formData.password) {
+      const msg = "Por favor completa todos los campos obligatorios.";
+      setError(msg);
+      alertError("Validación", msg);
+      return;
+    }
+
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+    if (!emailRe.test(formData.email)) {
+      const msg = "Por favor ingresa un correo electrónico válido.";
+      setError(msg);
+      alertError("Correo inválido", msg);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      const msg = "La contraseña debe tener al menos 6 caracteres.";
+      setError(msg);
+      alertError("Contraseña débil", msg);
+      return;
+    }
 
     if (Object.values(passwordChecks).includes(false)) {
-      setError("La contraseña no cumple todos los requisitos.");
+      const msg = "La contraseña no cumple todos los requisitos.";
+      setError(msg);
+      alertError("Contraseña inválida", msg);
       return;
     }
 
-    
     if (formData.password !== formData.confirmPassword) {
-      setError("Las contraseñas no coinciden.");
+      const msg = "Las contraseñas no coinciden.";
+      setError(msg);
+      alertError("Validación", msg);
       return;
     }
-
 
     if (!formData.subscription) {
-      setError("Debes seleccionar una membresía.");
+      const msg = "Debes seleccionar una membresía.";
+      setError(msg);
+      alertError("Campo faltante", msg);
       return;
     }
 
     if (!formData.paymentMethod) {
-      setError("Debes seleccionar un método de pago.");
+      const msg = "Debes seleccionar un método de pago.";
+      setError(msg);
+      alertError("Campo faltante", msg);
       return;
     }
 
     if (!/^\+?\d{7,15}$/.test(formData.phone)) {
-      setError("Por favor ingresa un número de teléfono válido.");
+      const msg = "Por favor ingresa un número de teléfono válido.";
+      setError(msg);
+      alertError("Teléfono inválido", msg);
       return;
     }
 
-
+    // Registro
     try {
+      showLoading("Creando tu cuenta...");
+
       const res = await registerUser({
         name: formData.name,
         email: formData.email,
@@ -109,16 +149,26 @@ function RegisterformUser() {
         subscription: formData.subscription,
       });
 
+      if ((res as any)?.accessToken) {
+        localStorage.setItem("accessToken", (res as any).accessToken);
+      }
 
+      await alertSuccess(
+        "¡Registro completado!",
+        "Tu cuenta de usuario fue creada correctamente."
+      );
 
-      localStorage.setItem("accessToken", res.accessToken);
-      alert("Registro de usuario completado ✅");
+      // Ajusta la ruta según tu flujo (login o dashboard)
+      navigate("/DashboardUser");
     } catch (err: any) {
-      setError(err?.message || "Error registrando usuario");
+      const msg =
+        err?.userMessage ||
+        "No pudimos completar el registro. Inténtalo más tarde.";
+      setError(msg);
+    } finally {
+      closeLoading();
     }
   };
-
-
 
   return (
     <Paper elevation={8} className="p-8 rounded-2xl shadow-lg max-w-md mx-auto">
@@ -196,13 +246,23 @@ function RegisterformUser() {
             }}
           />
 
-          {/* ✅ Validaciones en tiempo real */}
+          {/* Indicadores de contraseña */}
           <Box className="mt-1 text-sm">
-            <Typography color={passwordChecks.minLength ? "green" : "error"}>• Al menos 6 caracteres</Typography>
-            <Typography color={passwordChecks.uppercase ? "green" : "error"}>• Una letra mayúscula</Typography>
-            <Typography color={passwordChecks.lowercase ? "green" : "error"}>• Una letra minúscula</Typography>
-            <Typography color={passwordChecks.number ? "green" : "error"}>• Un número</Typography>
-            <Typography color={passwordChecks.specialChar ? "green" : "error"}>• Un carácter especial (!@#$%^&*...)</Typography>
+            <Typography color={passwordChecks.minLength ? "green" : "error"}>
+              • Al menos 6 caracteres
+            </Typography>
+            <Typography color={passwordChecks.uppercase ? "green" : "error"}>
+              • Una letra mayúscula
+            </Typography>
+            <Typography color={passwordChecks.lowercase ? "green" : "error"}>
+              • Una letra minúscula
+            </Typography>
+            <Typography color={passwordChecks.number ? "green" : "error"}>
+              • Un número
+            </Typography>
+            <Typography color={passwordChecks.specialChar ? "green" : "error"}>
+              • Un carácter especial (!@#$%^&*...)
+            </Typography>
           </Box>
 
           <TextField
@@ -323,4 +383,3 @@ function RegisterformUser() {
 }
 
 export default RegisterformUser;
-

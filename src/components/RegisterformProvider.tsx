@@ -18,7 +18,17 @@ import { auth0RegisterUrl } from "../services/auth";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
+// 👇 Importa las utilidades de SweetAlert2 centralizadas
+import {
+  showLoading,
+  closeLoading,
+  alertSuccess,
+  alertError,
+} from "../ui/alerts";
+
 function RegisterformProvider() {
+  const navigate = useNavigate(); // ✅ te faltaba esto
+
   const [formData, setFormData] = useState({
     name: "",
     birthDate: "",
@@ -37,9 +47,9 @@ function RegisterformProvider() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // ✅ Estado para validación dinámica de contraseña
+  // Validación dinámica de contraseña
   const [passwordChecks, setPasswordChecks] = useState({
-    minLength: false,
+    minLength: true,
     uppercase: false,
     lowercase: false,
     number: false,
@@ -52,10 +62,9 @@ function RegisterformProvider() {
     >
   ) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
     setError("");
 
-    // Validación dinámica del password
     if (name === "password") {
       setPasswordChecks({
         minLength: value.length >= 6,
@@ -70,33 +79,46 @@ function RegisterformProvider() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 🚫 Validación final antes del envío
+    // Validaciones de formulario
+    if (!formData.name || !formData.email || !formData.password) {
+      setError("Por favor completa todos los campos obligatorios.");
+      return;
+    }
+
+    if (!formData.email.includes("@")) {
+      setError("Por favor ingresa un correo electrónico válido.");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
     if (Object.values(passwordChecks).includes(false)) {
       setError("La contraseña no cumple todos los requisitos.");
       return;
     }
-
     if (formData.password !== formData.confirmPassword) {
       setError("Las contraseñas no coinciden.");
       return;
     }
-
     if (!formData.serviceType) {
       setError("Debes seleccionar un tipo de servicio.");
       return;
     }
-
-    if (!formData.phone.match(/^\+?\d{7,15}$/)) {
+    if (!/^\+?\d{7,15}$/.test(formData.phone)) {
       setError("Por favor ingresa un número de teléfono válido.");
       return;
     }
-
     if (!formData.days || !formData.horarios) {
       setError("Debes completar los días y horarios de disponibilidad.");
       return;
     }
 
     try {
+      showLoading("Creando tu cuenta...");
+
       const res = await registerProvider({
         name: formData.name,
         email: formData.email,
@@ -112,13 +134,29 @@ function RegisterformProvider() {
         days: formData.days,
         horarios: formData.horarios,
       });
-      localStorage.setItem("accessToken", res.accessToken);
-      alert("Registro de proveedor completado ✅");
 
-      navigate("DashboardProvider");
-      // Redirigir al dashboard o página de éxito
+      // Guarda el token si tu API lo envía
+      if ((res as any)?.accessToken) {
+        localStorage.setItem("accessToken", (res as any).accessToken);
+      }
+
+      // Alerta de éxito SweetAlert2
+      await alertSuccess(
+        "¡Registro de proveedor completado!",
+        "Tu cuenta fue creada correctamente."
+      );
+
+      // ruta del Dashboard
+      navigate("/DashboardProvider");
     } catch (err: any) {
-      setError(err?.message || "Error registrando proveedor");
+      const msg =
+        err?.userMessage ||
+        "No pudimos completar el registro. Inténtalo más tarde.";
+      setError(msg); // si quieres seguir mostrando el <Alert> de MUI
+      // alertError ya lo mostró http.ts, pero si quieres reforzar:
+      // alertError("Registro", msg);
+    } finally {
+      closeLoading();
     }
   };
 
@@ -198,31 +236,21 @@ function RegisterformProvider() {
             }}
           />
 
-          {/* ✅ Validaciones dinámicas del password */}
+          {/*  Validaciones dinámicas del password */}
           <Box className="mt-1 text-sm">
-            <Typography
-              color={passwordChecks.minLength ? "green" : "error"}
-            >
+            <Typography color={passwordChecks.minLength ? "green" : "error"}>
               • Al menos 6 caracteres
             </Typography>
-            <Typography
-              color={passwordChecks.uppercase ? "green" : "error"}
-            >
+            <Typography color={passwordChecks.uppercase ? "green" : "error"}>
               • Una letra mayúscula
             </Typography>
-            <Typography
-              color={passwordChecks.lowercase ? "green" : "error"}
-            >
+            <Typography color={passwordChecks.lowercase ? "green" : "error"}>
               • Una letra minúscula
             </Typography>
-            <Typography
-              color={passwordChecks.number ? "green" : "error"}
-            >
+            <Typography color={passwordChecks.number ? "green" : "error"}>
               • Un número
             </Typography>
-            <Typography
-              color={passwordChecks.specialChar ? "green" : "error"}
-            >
+            <Typography color={passwordChecks.specialChar ? "green" : "error"}>
               • Un carácter especial (!@#$%^&*...)
             </Typography>
           </Box>
@@ -240,9 +268,7 @@ function RegisterformProvider() {
                 <InputAdornment position="end">
                   <IconButton
                     aria-label="toggle password visibility"
-                    onClick={() =>
-                      setShowConfirmPassword(!showConfirmPassword)
-                    }
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     edge="end"
                   >
                     {showConfirmPassword ? (

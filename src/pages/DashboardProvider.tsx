@@ -18,6 +18,14 @@ import {
   FaClock,
 } from "react-icons/fa";
 
+// ✅ SweetAlert2 helpers centralizados
+import {
+  showLoading,
+  closeLoading,
+  alertSuccess,
+  alertError,
+} from "../ui/alerts";
+
 function ProviderProfile() {
   const { user, setUser, role } = useAuthContext();
 
@@ -68,44 +76,52 @@ function ProviderProfile() {
     });
   }, [profile]);
 
+  // Utils de validación
+  const isNonEmpty = (v: string) => v.trim().length > 0;
+  const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const isValidPhone = (v: string) => /^\+?\d{7,15}$/.test(v.trim());
+  const isValidDate = (v: string) => {
+    if (!v) return false;
+    const d = new Date(v);
+    return !Number.isNaN(d.getTime()) && d <= new Date();
+  };
+
   // Formatear fechas para mostrar
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("es-ES", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
-  };
 
   // Manejar clic en el botón de cámara
-  const handleCameraClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleCameraClick = () => fileInputRef.current?.click();
 
-  // Manejar selección de archivo
+  // Manejar selección de archivo (avatar)
   const handleFileSelect = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validar que sea una imagen
     if (!file.type.startsWith("image/")) {
-      alert("Por favor selecciona un archivo de imagen válido.");
-      return;
-    }
-
-    // Validar tamaño (máximo 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert(
-        "El archivo es demasiado grande. Por favor selecciona una imagen menor a 5MB."
+      return alertError(
+        "Archivo inválido",
+        "Selecciona una imagen (PNG/JPG/WEBP)."
       );
-      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return alertError(
+        "Archivo muy grande",
+        "La imagen debe ser menor a 5 MB."
+      );
     }
 
     setIsUploading(true);
     try {
+      showLoading("Subiendo imagen...");
       const result = await uploadAvatar(file);
+
       // Actualizar el usuario en el contexto con la nueva imagen (manteniendo el shape original)
       if (user) {
         const raw: any = user;
@@ -117,17 +133,19 @@ function ProviderProfile() {
         setUser(next);
         setImgBust(Date.now()); // bust cache
       }
-      alert("¡Imagen de perfil actualizada correctamente!");
+      await alertSuccess(
+        "¡Imagen actualizada!",
+        "Tu foto de perfil se guardó correctamente."
+      );
     } catch (error: any) {
-      alert(
-        `Error subiendo la imagen: ${error?.message || "Error desconocido"}`
+      await alertError(
+        "No se pudo subir la imagen",
+        error?.message || "Inténtalo más tarde."
       );
     } finally {
+      closeLoading();
       setIsUploading(false);
-      // Limpiar el input para permitir subir el mismo archivo de nuevo
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -175,30 +193,73 @@ function ProviderProfile() {
   const saveChanges = async () => {
     if (!editingField || !profile?.userId) return;
 
+    // ✅ Validación por campo
+    const value = tempValues[editingField as keyof typeof tempValues] as string;
+
+    if (editingField === "name" && !isNonEmpty(value)) {
+      return alertError("Validación", "El nombre no puede estar vacío.");
+    }
+    if (editingField === "email" && !isValidEmail(value)) {
+      return alertError("Validación", "Ingresa un correo electrónico válido.");
+    }
+    if (editingField === "phone" && !isValidPhone(value)) {
+      return alertError(
+        "Validación",
+        "El teléfono debe tener 7 a 15 dígitos (puede incluir +)."
+      );
+    }
+    if (editingField === "birthDate" && !isValidDate(value)) {
+      return alertError(
+        "Validación",
+        "Selecciona una fecha válida (no futura)."
+      );
+    }
+    if (editingField === "serviceType" && !isNonEmpty(value)) {
+      return alertError(
+        "Validación",
+        "Selecciona o escribe un tipo de servicio."
+      );
+    }
+    if (editingField === "about" && (!isNonEmpty(value) || value.length < 10)) {
+      return alertError(
+        "Validación",
+        "Describe tu servicio (mínimo 10 caracteres)."
+      );
+    }
+    if (editingField === "days" && !isNonEmpty(value)) {
+      return alertError(
+        "Validación",
+        "Indica los días disponibles (ej: lunes, miércoles)."
+      );
+    }
+    if (editingField === "horarios" && !isNonEmpty(value)) {
+      return alertError("Validación", "Indica horarios (ej: 09:00,18:00).");
+    }
+
     setIsSaving(true);
     try {
+      showLoading("Guardando cambios...");
+
       // Preparar los datos para enviar al API
       const updates: Record<string, any> = {
-        [editingField]: tempValues[editingField as keyof typeof tempValues],
+        [editingField]: value,
       };
 
       // Normaliza a arreglo si tu API lo espera como array
       if (editingField === "days") {
-        const parsed = updates.days
-          ?.split(",")
+        updates.days = value
+          .split(",")
           .map((s: string) => s.trim())
           .filter(Boolean);
-        updates.days = parsed;
       }
       if (editingField === "horarios") {
-        const parsed = updates.horarios
-          ?.split(",")
+        updates.horarios = value
+          .split(",")
           .map((s: string) => s.trim())
           .filter(Boolean);
-        updates.horarios = parsed;
       }
 
-      // Hacer la llamada al API para actualizar el proveedor
+      // Llamada al API
       await updateProviderProfile(profile.userId, updates);
 
       // Actualizar el contexto local respetando el shape original
@@ -210,25 +271,22 @@ function ProviderProfile() {
         : { ...raw, ...updates };
 
       setUser(next);
-
       setEditingField(null);
-      alert("¡Campo actualizado correctamente!");
+      await alertSuccess("¡Listo!", "Campo actualizado correctamente.");
     } catch (error: any) {
-      console.error("Error al actualizar el campo:", error);
-      alert(
-        `Error al actualizar el campo: ${error?.message || "Error desconocido"}`
+      await alertError(
+        "No se pudo actualizar",
+        error?.message || "Inténtalo más tarde."
       );
     } finally {
+      closeLoading();
       setIsSaving(false);
     }
   };
 
   // Manejar cambio en input de edición
   const handleInputChange = (field: string, value: string) => {
-    setTempValues((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setTempValues((prev) => ({ ...prev, [field]: value }));
   };
 
   if (!profile)
@@ -263,9 +321,9 @@ function ProviderProfile() {
           </div>
         </div>
 
-        {/* Columna derecha: Perfil del usuario */}
+        {/* Columna derecha: Perfil */}
         <div className="space-y-6">
-          {/* Sección 1: Foto de Perfil */}
+          {/* Foto de Perfil */}
           <div className="bg-white p-6 rounded-xl shadow-lg text-center">
             <div className="relative w-32 h-32 mx-auto mb-4">
               <img
@@ -293,7 +351,6 @@ function ProviderProfile() {
               </button>
             </div>
 
-            {/* Input file oculto */}
             <input
               ref={fileInputRef}
               type="file"
@@ -307,7 +364,7 @@ function ProviderProfile() {
             )}
           </div>
 
-          {/* Sección 2: Datos de Cuenta */}
+          {/* Datos de Cuenta */}
           <div className="bg-white p-6 rounded-xl shadow-lg">
             <h3 className="text-2xl font-semibold text-blue-800 mb-4 border-b pb-2">
               Mis Datos de Cuenta
@@ -683,7 +740,7 @@ function ProviderProfile() {
                     value={tempValues.days}
                     onChange={(e) => handleInputChange("days", e.target.value)}
                     className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ej: Lunes, Miércoles, Viernes"
+                    placeholder="Ej: lunes, miércoles, viernes"
                   />
                   <div className="flex space-x-2">
                     <button
@@ -737,7 +794,7 @@ function ProviderProfile() {
                       handleInputChange("horarios", e.target.value)
                     }
                     className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ej: 09:00 - 18:00"
+                    placeholder="Ej: 09:00,18:00"
                   />
                   <div className="flex space-x-2">
                     <button
