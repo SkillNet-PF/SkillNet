@@ -27,7 +27,7 @@ import {
 } from "../ui/alerts";
 
 function RegisterformProvider() {
-  const navigate = useNavigate(); // ✅ te faltaba esto
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     name: "",
