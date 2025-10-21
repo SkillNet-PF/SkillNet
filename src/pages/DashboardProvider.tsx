@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useMemo,
-  ElementType,
-} from "react";
+import React, { useState, useRef, useEffect, ElementType } from "react";
 import { useAuthContext } from "../contexts/AuthContext";
 import { updateProviderProfile, uploadAvatar } from "../services/auth";
 import {
@@ -24,8 +18,7 @@ import {
   FaClock,
   FaStar,
 } from "react-icons/fa";
-
-// SweetAlert2
+// SweetAlert2 helpers (tuyos)
 import {
   showLoading,
   closeLoading,
@@ -33,6 +26,7 @@ import {
   alertError,
 } from "../ui/alerts";
 
+/* --------------------- Estilo y utilidades --------------------- */
 type IconType = ElementType;
 
 interface StatCardProps {
@@ -77,6 +71,7 @@ interface EditableFieldProps {
   displayValue?: string;
 }
 
+/** ✅ EditableField sin useMemo (evita que desaparezca el input al editar) */
 const EditableField: React.FC<EditableFieldProps> = ({
   icon: Icon,
   title,
@@ -95,44 +90,11 @@ const EditableField: React.FC<EditableFieldProps> = ({
   displayValue,
 }) => {
   const isEditing = editingField === field;
-  const isDaysOrHorarios = field === "days" || field === "horarios";
-
-  const editInput = useMemo(() => {
-    const tempValue = tempValues[field];
-
-    if (isTextArea) {
-      return (
-        <textarea
-          value={tempValue}
-          onChange={(e) => handleInputChange(field, e.target.value)}
-          className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder={placeholder}
-          rows={3}
-        />
-      );
-    }
-
-    const finalPlaceholder = isDaysOrHorarios
+  const value = String(tempValues[field] ?? "");
+  const ph =
+    field === "days" || field === "horarios"
       ? "Ej: Lunes, Miércoles, Viernes (separar por comas)"
       : placeholder;
-
-    return;
-    <input
-      type={inputType}
-      value={tempValue}
-      onChange={(e) => handleInputChange(field, e.target.value)}
-      className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-      placeholder={finalPlaceholder}
-    />;
-  }, [
-    field,
-    tempValues,
-    handleInputChange,
-    inputType,
-    isTextArea,
-    placeholder,
-    isDaysOrHorarios,
-  ]);
 
   return (
     <div className="mb-4 p-4 border-b border-gray-100 last:border-b-0">
@@ -140,9 +102,27 @@ const EditableField: React.FC<EditableFieldProps> = ({
         <Icon className="text-blue-500" />
         <span>{title}</span>
       </h4>
+
       {isEditing ? (
         <div className="space-y-2 mt-2">
-          {editInput}
+          {isTextArea ? (
+            <textarea
+              value={value}
+              onChange={(e) => handleInputChange(field, e.target.value)}
+              className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder={ph}
+              rows={3}
+            />
+          ) : (
+            <input
+              type={inputType}
+              value={value}
+              onChange={(e) => handleInputChange(field, e.target.value)}
+              className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder={ph}
+            />
+          )}
+
           <div className="flex space-x-2">
             <button
               onClick={saveChanges}
@@ -180,6 +160,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
   );
 };
 
+/* --------------------- Componente principal --------------------- */
 function DashboardProvider() {
   const { user, setUser, role } = useAuthContext();
 
@@ -191,26 +172,10 @@ function DashboardProvider() {
   const [isUploading, setIsUploading] = useState(false);
   const [imgBust, setImgBust] = useState<number>(0);
 
-  // Estados de edición
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [tempValues, setTempValues] = useState<{ [key: string]: any }>({
-    name: profile?.name || "",
-    email: profile?.email || "",
-    birthDate: profile?.birthDate?.split("T")[0] || "",
-    address: profile?.address || "",
-    phone: profile?.phone || "",
-    serviceType: profile?.serviceType || "",
-    about: profile?.about || "",
-    days: Array.isArray(profile?.dias)
-      ? profile.dias.join(", ")
-      : profile?.days || "",
-    horarios: Array.isArray(profile?.horarios)
-      ? profile.horarios.join(", ")
-      : profile?.horarios || "",
-  });
+  const [tempValues, setTempValues] = useState<{ [key: string]: any }>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  // Rehidrata tempValues cuando llegue el perfil
   useEffect(() => {
     if (!profile) return;
     setTempValues({
@@ -255,12 +220,8 @@ function DashboardProvider() {
   };
 
   // Avatar
-  const handleCameraClick = () => fileInputRef.current?.click();
-
-  const handleFileSelect = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -271,10 +232,7 @@ function DashboardProvider() {
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      await alertError(
-        "Archivo muy grande",
-        "La imagen debe ser menor a 5 MB."
-      );
+      await alertError("Archivo muy grande", "Debe ser menor a 5 MB.");
       return;
     }
 
@@ -283,26 +241,23 @@ function DashboardProvider() {
       showLoading("Subiendo imagen...");
       const result = await uploadAvatar(file);
 
-      if (user) {
-        const raw: any = user;
-        const next = raw?.user
-          ? { ...raw, user: { ...raw.user, imgProfile: result.imgProfile } }
-          : raw?.data
-          ? { ...raw, data: { ...raw.data, imgProfile: result.imgProfile } }
-          : { ...raw, imgProfile: result.imgProfile };
+      const raw: any = user;
+      const next = raw?.user
+        ? { ...raw, user: { ...raw.user, imgProfile: result.imgProfile } }
+        : raw?.data
+        ? { ...raw, data: { ...raw.data, imgProfile: result.imgProfile } }
+        : { ...raw, imgProfile: result.imgProfile };
 
-        setUser(next);
-        setImgBust(Date.now());
-      }
+      setUser(next);
+      setImgBust(Date.now());
       await alertSuccess(
         "¡Imagen actualizada!",
         "Tu foto de perfil se guardó correctamente."
       );
     } catch (error: any) {
-      console.error("Error subiendo la imagen:", error);
       await alertError(
-        "No se pudo subir la imagen",
-        error?.message || "Inténtalo más tarde."
+        "Error",
+        error?.message || "No se pudo subir la imagen."
       );
     } finally {
       closeLoading();
@@ -311,63 +266,18 @@ function DashboardProvider() {
     }
   };
 
-  // Edición
-  const startEditing = (field: string) => {
-    setEditingField(field);
-    setTempValues((prev) => ({
-      ...prev,
-      [field]:
-        field === "birthDate"
-          ? profile?.birthDate?.split("T")[0] || ""
-          : prev[field],
-    }));
-  };
+  // Edición handlers
+  const handleInputChange = (field: string, value: string) =>
+    setTempValues((prev) => ({ ...prev, [field]: value }));
 
-  const cancelEditing = () => {
-    setEditingField(null);
-    setTempValues({
-      name: profile?.name || "",
-      email: profile?.email || "",
-      birthDate: profile?.birthDate?.split("T")[0] || "",
-      address: profile?.address || "",
-      phone: profile?.phone || "",
-      serviceType: profile?.serviceType || "",
-      about: profile?.about || "",
-      days: Array.isArray(profile?.dias)
-        ? profile.dias.join(", ")
-        : profile?.days || "",
-      horarios: Array.isArray(profile?.horarios)
-        ? profile.horarios.join(", ")
-        : profile?.horarios || "",
-    });
-  };
+  const cancelEditing = () => setEditingField(null);
 
   const saveChanges = async (): Promise<void> => {
     if (!editingField || !profile?.userId) return;
 
     const value = String(tempValues[editingField] ?? "").trim();
 
-    // “No hubo cambios”
-    const currentString = (() => {
-      if (editingField === "days") {
-        const arr = Array.isArray(profile?.dias) ? profile.dias : profile?.days;
-        return Array.isArray(arr) ? arr.join(", ") : String(arr ?? "");
-      }
-      if (editingField === "horarios") {
-        const arr = Array.isArray(profile?.horarios)
-          ? profile.horarios
-          : profile?.horarios;
-        return Array.isArray(arr) ? arr.join(", ") : String(arr ?? "");
-      }
-      return String(profile?.[editingField] ?? "");
-    })().trim();
-
-    if (currentString === value) {
-      setEditingField(null);
-      return;
-    }
-
-    // Validaciones para cada campo
+    // Validaciones rápidas
     if (editingField === "name" && !isNonEmpty(value)) {
       await alertError("Validación", "El nombre no puede estar vacío.");
       return;
@@ -416,65 +326,45 @@ function DashboardProvider() {
       return;
     }
 
-    setIsSaving(true);
-    const fieldToUpdate = editingField;
+    // Construir payload
+    const updates: Record<string, any> = {};
+    if (editingField === "days") {
+      updates.dias = value
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else if (editingField === "horarios") {
+      updates.horarios = value
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else {
+      updates[editingField] = value;
+    }
 
+    setIsSaving(true);
     try {
       showLoading("Guardando cambios...");
-
-      // Construir payload para API
-      const updates: Record<string, any> = {};
-      if (fieldToUpdate === "days") {
-        updates.dias = value
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-      } else if (fieldToUpdate === "horarios") {
-        updates.horarios = value
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-      } else {
-        updates[fieldToUpdate] = value;
-      }
-
       await updateProviderProfile(profile.userId, updates);
 
-      // Actualizar contexto respetando shape original
+      // Actualizar contexto respetando shape
       const raw: any = user;
-      const keyUpdated =
-        fieldToUpdate === "days"
-          ? "dias"
-          : fieldToUpdate === "horarios"
-          ? "horarios"
-          : fieldToUpdate;
-
-      const updatedFields: Record<string, any> = {
-        [keyUpdated]: updates[keyUpdated] ?? value,
-      };
-
+      const key = editingField === "days" ? "dias" : editingField; // 'horarios' ya coincide
       const next = raw?.user
-        ? { ...raw, user: { ...raw.user, ...updatedFields } }
+        ? { ...raw, user: { ...raw.user, [key]: updates[key] ?? value } }
         : raw?.data
-        ? { ...raw, data: { ...raw.data, ...updatedFields } }
-        : { ...raw, ...updatedFields };
+        ? { ...raw, data: { ...raw.data, [key]: updates[key] ?? value } }
+        : { ...raw, [key]: updates[key] ?? value };
 
       setUser(next);
       setEditingField(null);
       await alertSuccess("¡Listo!", "Campo actualizado correctamente.");
     } catch (error: any) {
-      await alertError(
-        "No se pudo actualizar",
-        error?.message || "Inténtalo más tarde."
-      );
+      await alertError("Error", error?.message || "No se pudo actualizar.");
     } finally {
       closeLoading();
       setIsSaving(false);
     }
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setTempValues((prev) => ({ ...prev, [field]: value }));
   };
 
   if (!profile)
@@ -508,10 +398,9 @@ function DashboardProvider() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* COLUMNA IZQUIERDA — ESTADÍSTICAS & INFO DE SERVICIO (solo proveedor) */}
+        {/* COLUMNA IZQUIERDA — estadísticas e info de servicio */}
         {isProvider && (
           <div className="lg:col-span-2 space-y-8">
-            {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard
                 title="Valoración promedio"
@@ -533,7 +422,6 @@ function DashboardProvider() {
               />
             </div>
 
-            {/* Información de servicio con edición */}
             <div className="bg-white p-6 rounded-xl shadow-lg">
               <h2 className="text-2xl font-bold text-blue-800 mb-4 flex items-center space-x-2 border-b pb-2">
                 <FaInfoCircle className="text-yellow-500" />
@@ -547,7 +435,7 @@ function DashboardProvider() {
                 currentValue={profile?.serviceType}
                 editingField={editingField}
                 tempValues={tempValues}
-                startEditing={startEditing}
+                startEditing={setEditingField}
                 handleInputChange={handleInputChange}
                 saveChanges={saveChanges}
                 cancelEditing={cancelEditing}
@@ -562,12 +450,12 @@ function DashboardProvider() {
                 currentValue={profile?.about}
                 editingField={editingField}
                 tempValues={tempValues}
-                startEditing={startEditing}
+                startEditing={setEditingField}
                 handleInputChange={handleInputChange}
                 saveChanges={saveChanges}
                 cancelEditing={cancelEditing}
                 isSaving={isSaving}
-                isTextArea={true}
+                isTextArea
                 placeholder="Cuéntanos sobre tu experiencia y especialidades."
               />
 
@@ -582,7 +470,7 @@ function DashboardProvider() {
                 }
                 editingField={editingField}
                 tempValues={tempValues}
-                startEditing={startEditing}
+                startEditing={setEditingField}
                 handleInputChange={handleInputChange}
                 saveChanges={saveChanges}
                 cancelEditing={cancelEditing}
@@ -601,7 +489,7 @@ function DashboardProvider() {
                 }
                 editingField={editingField}
                 tempValues={tempValues}
-                startEditing={startEditing}
+                startEditing={setEditingField}
                 handleInputChange={handleInputChange}
                 saveChanges={saveChanges}
                 cancelEditing={cancelEditing}
@@ -612,9 +500,9 @@ function DashboardProvider() {
           </div>
         )}
 
-        {/* COLUMNA DERECHA — FOTO + DATOS PERSONALES (siempre visible) */}
+        {/* COLUMNA DERECHA — avatar + datos personales */}
         <div className={isProvider ? "space-y-6" : "lg:col-span-3 space-y-6"}>
-          {/* Foto de perfil */}
+          {/* Avatar */}
           <div className="bg-white p-6 rounded-xl shadow-lg text-center border-t-4 border-yellow-400">
             <div className="relative w-36 h-36 mx-auto mb-4">
               <img
@@ -627,7 +515,7 @@ function DashboardProvider() {
                 className="w-full h-full rounded-full object-cover border-4 border-blue-600 shadow-xl"
               />
               <button
-                onClick={handleCameraClick}
+                onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
                 className={`absolute bottom-0 right-0 p-3 rounded-full text-blue-900 transition shadow-lg border-2 border-white ${
                   isUploading
@@ -655,12 +543,10 @@ function DashboardProvider() {
             <h3 className="text-xl font-bold text-blue-900 mt-3">
               {profile?.name}
             </h3>
-            <p className="text-sm text-gray-500 capitalize">
-              {profile.email} - Rol: {role}
-            </p>
+            <p className="text-sm text-gray-500">{profile?.email}</p>
           </div>
 
-          {/* Datos personales y contacto */}
+          {/* Datos Personales y Contacto */}
           <div className="bg-white p-6 rounded-xl shadow-lg">
             <h3 className="text-2xl font-semibold text-blue-800 mb-2 flex items-center space-x-2 border-b pb-2">
               <FaUser className="text-yellow-500" />
@@ -674,7 +560,7 @@ function DashboardProvider() {
               currentValue={profile?.name}
               editingField={editingField}
               tempValues={tempValues}
-              startEditing={startEditing}
+              startEditing={setEditingField}
               handleInputChange={handleInputChange}
               saveChanges={saveChanges}
               cancelEditing={cancelEditing}
@@ -689,7 +575,7 @@ function DashboardProvider() {
               currentValue={profile?.email}
               editingField={editingField}
               tempValues={tempValues}
-              startEditing={startEditing}
+              startEditing={setEditingField}
               handleInputChange={handleInputChange}
               saveChanges={saveChanges}
               cancelEditing={cancelEditing}
@@ -705,7 +591,7 @@ function DashboardProvider() {
               currentValue={profile?.phone}
               editingField={editingField}
               tempValues={tempValues}
-              startEditing={startEditing}
+              startEditing={setEditingField}
               handleInputChange={handleInputChange}
               saveChanges={saveChanges}
               cancelEditing={cancelEditing}
@@ -721,7 +607,7 @@ function DashboardProvider() {
               currentValue={profile?.address}
               editingField={editingField}
               tempValues={tempValues}
-              startEditing={startEditing}
+              startEditing={setEditingField}
               handleInputChange={handleInputChange}
               saveChanges={saveChanges}
               cancelEditing={cancelEditing}
@@ -737,7 +623,7 @@ function DashboardProvider() {
               displayValue={formatDate(profile?.birthDate)}
               editingField={editingField}
               tempValues={tempValues}
-              startEditing={startEditing}
+              startEditing={setEditingField}
               handleInputChange={handleInputChange}
               saveChanges={saveChanges}
               cancelEditing={cancelEditing}
@@ -745,7 +631,7 @@ function DashboardProvider() {
               inputType="date"
             />
 
-            {/* Estado de la cuenta (solo visualización) */}
+            {/* Estado cuenta (solo visualización) */}
             <div className="p-4 border-b border-gray-100 last:border-b-0">
               <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-3 mb-2">
                 <FaCheckCircle className="text-blue-500" />
@@ -771,7 +657,7 @@ function DashboardProvider() {
         </div>
       </div>
 
-      {/* FOOTER — para clientes */}
+      {/* Footer para clientes */}
       {!isProvider && (
         <div className="mt-8 bg-white p-6 rounded-xl shadow-lg border-t-4 border-blue-500">
           <h2 className="text-2xl font-bold text-blue-800 mb-4 flex items-center space-x-2">
