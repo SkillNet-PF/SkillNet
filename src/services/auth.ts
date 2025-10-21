@@ -107,6 +107,7 @@ export async function updateProviderProfile(
     about?: string;
     days?: string;
     horarios?: string;
+    categoryId?: string;
   }
 ): Promise<any> {
   return http<any>(`/serviceprovider/${providerId}`, {

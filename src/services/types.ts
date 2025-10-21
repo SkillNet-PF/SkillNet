@@ -51,7 +51,7 @@ export interface ProviderRegisterRequest {
   isActive: boolean; // Campo requerido por el backend
 
   // Campos específicos de ProviderRegisterDto
-  serviceType: string;
+  serviceType?: string;
   about: string; // Campo correcto (no "bio")
   days: string; // CSV e.g. "lunes,martes"
   horarios: string; // CSV e.g. "09:00,14:00"

@@ -57,7 +57,6 @@ function RegisterformProvider() {
     specialChar: false,
   });
 
-  const navigate = useNavigate();
 
   React.useEffect(() => {
     getCategories().then(setCategories).catch(() => setCategories([]));

@@ -447,6 +447,7 @@ function ProviderProfile() {
                         <FaInfoCircle className="text-yellow-500" />
                         <span>Información de Servicio</span>
                     </h2>
+                </div>
 
         {/* Columna derecha: Perfil del usuario */}
         <div className="space-y-6">
@@ -476,6 +477,7 @@ function ProviderProfile() {
               >
                 <FaCamera className="text-md" />
               </button>
+            </div>
             </div>
             <input
               ref={fileInputRef}
