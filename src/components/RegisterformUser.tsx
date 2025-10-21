@@ -2,18 +2,7 @@
 
 import React, { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import {
-  Box,
-  Stack,
-  TextField,
-  Button,
-  IconButton,
-  InputAdornment,
-  MenuItem,
-  Alert,
-  Typography,
-  Paper,
-} from "@mui/material";
+import { Box, Stack, TextField, Button, IconButton, InputAdornment, Alert, Typography, Paper } from "@mui/material";
 import { registerUser } from "../services/clients";
 import { auth0RegisterUrl } from "../services/auth";
 
@@ -26,7 +15,6 @@ function RegisterformUser() {
     confirmPassword: "",
     address: "",
     phone: "",
-    // Campos de suscripción/pago removidos
   });
 
   const [error, setError] = useState("");
@@ -96,7 +84,6 @@ function RegisterformUser() {
         address: formData.address,
         phone: formData.phone,
         rol: "client",
-        // paymentMethod y subscription son opcionales
       });
 
 

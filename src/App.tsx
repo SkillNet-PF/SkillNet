@@ -12,7 +12,6 @@ import ProviderAgenda from "./pages/ProviderAgenda";
 import AuthCallback from "./pages/AuthCallback";
 import RequestAppointment from "./pages/RequestAppointment";
 import DashboardAdmin from "./pages/admin/DashboardAdmin";
-import ProfileRouter from "./pages/ProfileRouter";
 
 function App() {
   return (

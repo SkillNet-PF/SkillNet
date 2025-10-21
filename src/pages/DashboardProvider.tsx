@@ -2,24 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, ElementType } from "react"
 import { useAuthContext } from "../contexts/AuthContext";
 import { updateProviderProfile, uploadAvatar } from "../services/auth";
 import { getCategories, CategoryDto } from "../services/categories";
-import {
-  FaEdit,
-  FaEnvelope,
-  FaUser,
-  FaCamera,
-  FaMapMarkerAlt,
-  FaPhone,
-  FaBirthdayCake,
-  FaCheckCircle,
-  FaSave,
-  FaTimes,
-  FaCog,
-  FaInfoCircle,
-  FaClipboardList,
-  FaClock,
-  //FaSignOutAlt,
-  FaStar,
-} from "react-icons/fa";
+import { FaEdit, FaEnvelope, FaUser, FaCamera, FaMapMarkerAlt, FaPhone, FaBirthdayCake, FaCheckCircle, FaSave, FaTimes, FaCog, FaInfoCircle, FaClipboardList, FaClock } from "react-icons/fa";
 
 
 // --- 1. DEFINICIÓN DE INTERFACES PARA CORREGIR ERRORES DE TIPADO (TS7031) ---
@@ -30,13 +13,6 @@ type IconType = ElementType;
 // type IconType = typeof FaUser; 
 
 
-// Interface para StatCard
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  icon: IconType; // Usamos el tipo definido
-  color: string;
-}
 
 // Interface para EditableField
 interface EditableFieldProps {
@@ -60,15 +36,6 @@ interface EditableFieldProps {
 
 // Componente auxiliar para el diseño de tarjetas de datos clave (similares a la imagen)
 // Aplicamos la interface StatCardProps
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color }) => (
-  <div className="bg-white p-6 rounded-lg shadow-lg border-l-4 border-blue-500 flex items-center justify-between transition hover:shadow-xl">
-    <div>
-      <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{title}</p>
-      <p className={`text-3xl font-bold ${color}`}>{value}</p>
-    </div>
-    <Icon className={`text-4xl ${color} opacity-30`} />
-  </div>
-);
 
 // Componente para manejar la visualización/edición de un campo
 // Aplicamos la interface EditableFieldProps
