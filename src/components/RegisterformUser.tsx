@@ -26,8 +26,7 @@ function RegisterformUser() {
     confirmPassword: "",
     address: "",
     phone: "",
-    subscription: "",
-    paymentMethod: "",
+    // Campos de suscripción/pago removidos
   });
 
   const [error, setError] = useState("");
@@ -79,15 +78,7 @@ function RegisterformUser() {
     }
 
 
-    if (!formData.subscription) {
-      setError("Debes seleccionar una membresía.");
-      return;
-    }
-
-    if (!formData.paymentMethod) {
-      setError("Debes seleccionar un método de pago.");
-      return;
-    }
+    // Suscripción y método de pago ya no son obligatorios
 
     if (!/^\+?\d{7,15}$/.test(formData.phone)) {
       setError("Por favor ingresa un número de teléfono válido.");
@@ -105,8 +96,7 @@ function RegisterformUser() {
         address: formData.address,
         phone: formData.phone,
         rol: "client",
-        paymentMethod: formData.paymentMethod,
-        subscription: formData.subscription,
+        // paymentMethod y subscription son opcionales
       });
 
 
@@ -250,35 +240,7 @@ function RegisterformUser() {
             required
           />
 
-          <TextField
-            select
-            name="subscription"
-            label="Plan"
-            value={formData.subscription}
-            onChange={handleChange}
-            fullWidth
-            required
-          >
-            <MenuItem value="">Selecciona un plan</MenuItem>
-            <MenuItem value="basic">Básico</MenuItem>
-            <MenuItem value="standard">Estándar</MenuItem>
-            <MenuItem value="premium">Premium</MenuItem>
-          </TextField>
-
-          <TextField
-            select
-            name="paymentMethod"
-            label="Método de pago"
-            value={formData.paymentMethod}
-            onChange={handleChange}
-            fullWidth
-            required
-          >
-            <MenuItem value="">Selecciona método de pago</MenuItem>
-            <MenuItem value="tarjeta_credito">Tarjeta de Crédito</MenuItem>
-            <MenuItem value="paypal">PayPal</MenuItem>
-            <MenuItem value="transferencia">Transferencia Bancaria</MenuItem>
-          </TextField>
+          {/* Campos de plan y método de pago removidos */}
 
           <Button type="submit" variant="contained" color="primary" fullWidth>
             Registrarse

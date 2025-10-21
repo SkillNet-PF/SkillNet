@@ -6,7 +6,9 @@ import RegisterProvider from "./pages/RegisterProvider";
 import NotFound from "./pages/NotFound";
 import RegisterChoice from "./pages/RegisterChoice";
 import NavbarHandler from "./components/NavbarHandler";
-import UserProfile from "./pages/DashboardUser";
+import Profile from "./pages/Profile";
+import MyAppointments from "./pages/MyAppointments";
+import ProviderAgenda from "./pages/ProviderAgenda";
 import AuthCallback from "./pages/AuthCallback";
 import RequestAppointment from "./pages/RequestAppointment";
 import DashboardAdmin from "./pages/admin/DashboardAdmin";
@@ -24,8 +26,10 @@ function App() {
           <Route path="/register/provider" element={<RegisterProvider />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/admin/dashboard" element={<DashboardAdmin />} />
-          <Route path="/perfil" element={<UserProfile />} /> 
+          <Route path="/perfil" element={<Profile />} /> 
           <Route path="/solicitar" element={<RequestAppointment />} />
+          <Route path="/mis-turnos" element={<MyAppointments />} />
+          <Route path="/agenda" element={<ProviderAgenda />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

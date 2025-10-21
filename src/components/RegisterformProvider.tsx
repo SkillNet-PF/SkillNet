@@ -12,8 +12,12 @@ import {
   Alert,
   Typography,
   Paper,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import { registerProvider } from "../services/providers";
+import { getCategories, CategoryDto } from "../services/categories";
 import { auth0RegisterUrl } from "../services/auth";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
@@ -27,7 +31,6 @@ function RegisterformProvider() {
     confirmPassword: "",
     address: "",
     phone: "",
-    serviceType: "",
     about: "",
     days: "",
     horarios: "",
@@ -36,6 +39,11 @@ function RegisterformProvider() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [categoryId, setCategoryId] = useState<string>("");
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [startTime, setStartTime] = useState<string>("09:00");
+  const [endTime, setEndTime] = useState<string>("18:00");
 
   // ✅ Estado para validación dinámica de contraseña
   const [passwordChecks, setPasswordChecks] = useState({
@@ -47,6 +55,35 @@ function RegisterformProvider() {
   });
 
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    getCategories().then(setCategories).catch(() => setCategories([]));
+  }, []);
+
+  const toggleDay = (day: string) => {
+    setSelectedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  const generateTimeSlotsCSV = (from: string, to: string, stepMinutes = 60) => {
+    // Convierte HH:mm a minutos
+    const toMinutes = (hhmm: string) => {
+      const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
+      return h * 60 + m;
+    };
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fromMin = toMinutes(from);
+    const toMin = toMinutes(to);
+    if (isNaN(fromMin) || isNaN(toMin) || fromMin >= toMin) return "";
+    const slots: string[] = [];
+    for (let t = fromMin; t <= toMin; t += stepMinutes) {
+      const h = Math.floor(t / 60);
+      const m = t % 60;
+      slots.push(`${pad(h)}:${pad(m)}`);
+    }
+    return slots.join(",");
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -83,18 +120,26 @@ function RegisterformProvider() {
       return;
     }
 
-    if (!formData.serviceType) {
-      setError("Debes seleccionar un tipo de servicio.");
-      return;
-    }
+    // serviceType deja de ser obligatorio: lo deriva la categoría
 
     if (!formData.phone.match(/^\+?\d{7,15}$/)) {
       setError("Por favor ingresa un número de teléfono válido.");
       return;
     }
 
-    if (!formData.days || !formData.horarios) {
-      setError("Debes completar los días y horarios de disponibilidad.");
+    if (!selectedDays.length) {
+      setError("Selecciona al menos un día disponible.");
+      return;
+    }
+
+    if (!categoryId) {
+      setError("Debes seleccionar una categoría.");
+      return;
+    }
+
+    const horariosCSV = generateTimeSlotsCSV(startTime, endTime, 60);
+    if (!horariosCSV) {
+      setError("Rango horario inválido (hora de inicio debe ser menor a fin).");
       return;
     }
 
@@ -109,10 +154,11 @@ function RegisterformProvider() {
         phone: formData.phone,
         rol: "provider",
         isActive: true,
-        serviceType: formData.serviceType,
+        // serviceType omitido: la categoría define el tipo
         about: formData.about,
-        days: formData.days,
-        horarios: formData.horarios,
+        days: selectedDays.join(","),
+        horarios: horariosCSV,
+        categoryId,
       });
       localStorage.setItem("accessToken", res.accessToken);
       alert("Registro de proveedor completado ✅");
@@ -274,20 +320,21 @@ function RegisterformProvider() {
             required
           />
 
+          {/* Campo "Tipo de servicio" eliminado: la categoría del admin define el tipo */}
+
           <TextField
             select
-            name="serviceType"
-            label="Tipo de servicio"
-            value={formData.serviceType}
-            onChange={handleChange}
+            name="categoryId"
+            label="Categoría"
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
             fullWidth
             required
           >
-            <MenuItem value="">Selecciona tu servicio</MenuItem>
-            <MenuItem value="plomeria">Plomería</MenuItem>
-            <MenuItem value="electricidad">Electricidad</MenuItem>
-            <MenuItem value="carpinteria">Carpintería</MenuItem>
-            <MenuItem value="otros">Otros</MenuItem>
+            <MenuItem value="">Selecciona una categoría</MenuItem>
+            {categories.map((c) => (
+              <MenuItem key={c.categoryId} value={c.categoryId}>{c.name}</MenuItem>
+            ))}
           </TextField>
 
           <TextField
@@ -302,25 +349,48 @@ function RegisterformProvider() {
             required
           />
 
-          <TextField
-            name="days"
-            label="Días disponibles"
-            placeholder="ej: lunes,martes,miercoles"
-            value={formData.days}
-            onChange={handleChange}
-            fullWidth
-            required
-          />
+          <Box>
+            <Typography variant="subtitle2" className="mb-1">Días disponibles</Typography>
+            <FormGroup row>
+              {[
+                "lunes",
+                "martes",
+                "miércoles",
+                "jueves",
+                "viernes",
+                "sábado",
+                "domingo",
+              ].map((d) => (
+                <FormControlLabel
+                  key={d}
+                  control={
+                    <Checkbox
+                      checked={selectedDays.includes(d)}
+                      onChange={() => toggleDay(d)}
+                    />
+                  }
+                  label={d}
+                />
+              ))}
+            </FormGroup>
+          </Box>
 
-          <TextField
-            name="horarios"
-            label="Horarios disponibles"
-            placeholder="ej: 09:00,18:00"
-            value={formData.horarios}
-            onChange={handleChange}
-            fullWidth
-            required
-          />
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField
+              type="time"
+              label="Hora inicio"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              type="time"
+              label="Hora fin"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
 
           <Button type="submit" variant="contained" color="success" fullWidth>
             Registrarse como Proveedor

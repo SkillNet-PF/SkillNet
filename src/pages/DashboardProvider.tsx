@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAuthContext } from "../contexts/AuthContext";
 import { updateProviderProfile, uploadAvatar } from "../services/auth";
+import { getCategories, CategoryDto } from "../services/categories";
 import {
   FaEdit,
   FaEnvelope,
@@ -37,7 +38,7 @@ function ProviderProfile() {
     birthDate: profile?.birthDate || "",
     address: profile?.address || "",
     phone: profile?.phone || "",
-    serviceType: profile?.serviceType || "",
+    // serviceType eliminado de la UI; se usa categoría
     about: profile?.about || "",
     days: Array.isArray(profile?.dias)
       ? profile.dias.join(", ")
@@ -47,6 +48,8 @@ function ProviderProfile() {
       : profile?.horarios || "",
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [categoryId, setCategoryId] = useState<string>("");
 
   // Resync cuando profile se hidrata
   useEffect(() => {
@@ -57,7 +60,7 @@ function ProviderProfile() {
       birthDate: profile?.birthDate || "",
       address: profile?.address || "",
       phone: profile?.phone || "",
-      serviceType: profile?.serviceType || "",
+      // serviceType eliminado de la UI
       about: profile?.about || "",
       days: Array.isArray(profile?.dias)
         ? profile.dias.join(", ")
@@ -66,6 +69,9 @@ function ProviderProfile() {
         ? profile.horarios.join(", ")
         : profile?.horarios || "",
     });
+    // Cargar categorías para selector
+    getCategories().then(setCategories).catch(() => setCategories([]));
+    setCategoryId(profile?.category?.categoryId || profile?.category?.CategoryID || "");
   }, [profile]);
 
   // Formatear fechas para mostrar
@@ -140,7 +146,7 @@ function ProviderProfile() {
       birthDate: profile?.birthDate || "",
       address: profile?.address || "",
       phone: profile?.phone || "",
-      serviceType: profile?.serviceType || "",
+      // serviceType eliminado de la UI
       about: profile?.about || "",
       days: Array.isArray(profile?.dias)
         ? profile.dias.join(", ")
@@ -160,7 +166,7 @@ function ProviderProfile() {
       birthDate: profile?.birthDate || "",
       address: profile?.address || "",
       phone: profile?.phone || "",
-      serviceType: profile?.serviceType || "",
+      // serviceType eliminado de la UI
       about: profile?.about || "",
       days: Array.isArray(profile?.dias)
         ? profile.dias.join(", ")
@@ -239,14 +245,14 @@ function ProviderProfile() {
     );
 
   return (
-    <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
+    <div className="container mx-auto p-6 bg-gray-50 dark:bg-slate-900 dark:text-slate-100 min-h-screen">
       <h1 className="text-4xl font-extrabold text-blue-900 mb-8 border-b-4 border-yellow-400 pb-2">
         Perfil de Proveedor
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Columna izquierda: Historial/Actividad */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg">
           <h2 className="text-3xl font-bold text-blue-800 mb-6 flex items-center space-x-3">
             <FaClipboardList className="text-yellow-500" />
             <span>Panel de Actividad</span>
@@ -266,7 +272,7 @@ function ProviderProfile() {
         {/* Columna derecha: Perfil del usuario */}
         <div className="space-y-6">
           {/* Sección 1: Foto de Perfil */}
-          <div className="bg-white p-6 rounded-xl shadow-lg text-center">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg text-center">
             <div className="relative w-32 h-32 mx-auto mb-4">
               <img
                 src={
@@ -308,7 +314,7 @@ function ProviderProfile() {
           </div>
 
           {/* Sección 2: Datos de Cuenta */}
-          <div className="bg-white p-6 rounded-xl shadow-lg">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg">
             <h3 className="text-2xl font-semibold text-blue-800 mb-4 border-b pb-2">
               Mis Datos de Cuenta
             </h3>
@@ -568,27 +574,46 @@ function ProviderProfile() {
               )}
             </div>
 
-            {/* Tipo de Servicio */}
+            {/* Tipo de servicio eliminado: se muestra categoría */}
             <div className="mb-4">
               <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
                 <FaCog />
-                <span>Tipo de Servicio</span>
+                <span>Categoría</span>
               </h4>
-              {editingField === "serviceType" ? (
+              {editingField === "category" ? (
                 <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={tempValues.serviceType}
-                    onChange={(e) =>
-                      handleInputChange("serviceType", e.target.value)
-                    }
+                  <select
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
                     className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ej: Plomería, Electricidad, etc."
-                  />
+                  >
+                    <option value="">Selecciona una categoría</option>
+                    {categories.map((c) => (
+                      <option key={c.categoryId} value={c.categoryId}>{c.name}</option>
+                    ))}
+                  </select>
                   <div className="flex space-x-2">
                     <button
-                      onClick={saveChanges}
-                      disabled={isSaving}
+                      onClick={async () => {
+                        setIsSaving(true);
+                        try {
+                          await updateProviderProfile(profile.userId, { categoryId });
+                          const raw: any = user;
+                          const next = raw?.user
+                            ? { ...raw, user: { ...raw.user, category: { categoryId, name: categories.find(c=>c.categoryId===categoryId)?.name || '' } } }
+                            : raw?.data
+                            ? { ...raw, data: { ...raw.data, category: { categoryId, name: categories.find(c=>c.categoryId===categoryId)?.name || '' } } }
+                            : { ...raw, category: { categoryId, name: categories.find(c=>c.categoryId===categoryId)?.name || '' } };
+                          setUser(next);
+                          setEditingField(null);
+                          alert("¡Categoría actualizada!");
+                        } catch (e:any) {
+                          alert(e?.message || "Error actualizando categoría");
+                        } finally {
+                          setIsSaving(false);
+                        }
+                      }}
+                      disabled={isSaving || !categoryId}
                       className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
                     >
                       <FaSave />
@@ -607,12 +632,12 @@ function ProviderProfile() {
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                   <p className="text-gray-700">
-                    {profile?.serviceType || "No especificado"}
+                    {profile?.category?.name || "Sin categoría"}
                   </p>
                   <button
-                    onClick={() => startEditing("serviceType")}
+                    onClick={() => setEditingField("category")}
                     className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
-                    title="Editar tipo de servicio"
+                    title="Editar categoría"
                   >
                     <FaEdit />
                   </button>

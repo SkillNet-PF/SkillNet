@@ -7,7 +7,13 @@ export interface CategoryDto {
 }
 
 export async function getCategories(): Promise<CategoryDto[]> {
-  return await http<CategoryDto[]>("/categories", { method: "GET" });
+  const raw = await http<any[]>("/categories", { method: "GET" });
+  // Normaliza keys desde el backend (CategoryID/Name) a camel-case
+  return (raw || []).map((c: any) => ({
+    categoryId: c?.categoryId ?? c?.CategoryID ?? c?.id ?? "",
+    name: c?.name ?? c?.Name ?? "",
+    description: c?.description ?? c?.Description ?? undefined,
+  }));
 }
 
 
