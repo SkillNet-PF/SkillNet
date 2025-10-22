@@ -2,7 +2,11 @@
 import { alertError } from "../ui/alerts";
 
 // Solo Vite: lee VITE_API_URL si existe; si no, usa el proxy /api
-const API_URL: string = (import.meta as any).env?.VITE_API_URL ?? "/api";
+const RAW_API_URL: string = (import.meta as any).env?.VITE_API_URL ?? "/api";
+// Normaliza base para evitar dobles barras
+const API_BASE = RAW_API_URL.endsWith("/")
+  ? RAW_API_URL.slice(0, -1)
+  : RAW_API_URL;
 
 function mapStatusToMessage(status: number, apiMessage?: string) {
   if (status >= 400 && status < 500) {
@@ -26,7 +30,8 @@ export async function http<T>(path: string, options?: RequestInit): Promise<T> {
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const fullUrl = `${API_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const fullPath = path.startsWith("/") ? path : `/${path}`;
+  const fullUrl = `${API_BASE}${fullPath}`;
 
   try {
     const res = await fetch(fullUrl, { ...options, headers });
@@ -35,7 +40,7 @@ export async function http<T>(path: string, options?: RequestInit): Promise<T> {
       let apiMessage = "";
       try {
         const data = await res.json();
-        apiMessage = data?.message || data?.error || "";
+        apiMessage = (data as any)?.message || (data as any)?.error || "";
       } catch {
         try {
           apiMessage = await res.text();
@@ -62,29 +67,27 @@ export async function http<T>(path: string, options?: RequestInit): Promise<T> {
     }
 
     const text = await res.text().catch(() => "");
-    const err: any = new Error(
-      `Respuesta inesperada del servidor (no JSON) desde ${fullUrl}: ${text?.slice(
-        0,
-        120
-      )}`
+    const nonJsonErr: any = new Error(
+      `Respuesta inesperada (no JSON) desde ${fullUrl}: ${text?.slice(0, 120)}`
     );
-    err.status = res.status;
-    throw err;
+    nonJsonErr.status = res.status;
+    throw nonJsonErr;
   } catch (err: any) {
-    if (!navigator.onLine) {
+    // Errores de red / offline
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
       const userMessage = "Sin conexión a internet. Revisa tu conexión.";
       alertError("Conexión", userMessage);
-      err = err || new Error(userMessage);
-      err.userMessage = userMessage;
-      throw err;
+      const offlineErr: any = err || new Error(userMessage);
+      offlineErr.userMessage = userMessage;
+      throw offlineErr;
     }
     if (!err?.status) {
       const userMessage =
         "No pudimos conectarnos con el servidor. Inténtalo nuevamente.";
       alertError("Conexión", userMessage);
-      err = err || new Error(userMessage);
-      err.userMessage = userMessage;
-      throw err;
+      const netErr: any = err || new Error(userMessage);
+      netErr.userMessage = userMessage;
+      throw netErr;
     }
     throw err;
   }

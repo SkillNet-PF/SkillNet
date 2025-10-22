@@ -14,7 +14,6 @@ import {
   Paper,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-
 import { registerUser } from "../services/clients";
 import { auth0RegisterUrl } from "../services/auth";
 
@@ -144,7 +143,7 @@ function RegisterformUser() {
         "¡Registro completado!",
         "Tu cuenta de usuario fue creada correctamente."
       );
-      navigate("/DashboardUser"); // respeta tu flujo
+      navigate("/DashboardUser"); // respeta tu flujo actual
     } catch (err: any) {
       const msg =
         err?.userMessage ||

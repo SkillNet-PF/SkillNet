@@ -31,7 +31,10 @@ export interface ClientRegisterRequest {
   address: string;
   phone: string;
   rol: "client";
-  // ❌ Eliminado: subscription / paymentMethod (ya no son obligatorios)
+
+  // Compatibilidad: algunos backends pueden usar estos campos; déjalos opcionales
+  paymentMethod?: string; // "tarjeta_credito", "paypal", "transferencia"
+  subscription?: string; // "basic", "standard", "premium"
 }
 
 // Registro de proveedor
@@ -47,7 +50,7 @@ export interface ProviderRegisterRequest {
   address: string;
   phone: string;
   rol: "provider";
-  isActive?: boolean; // lo enviamos como true, pero opcional por si el back setea default
+  isActive?: boolean; // opcional por si el back setea default
 
   // específicos
   about: string; // descripción (antes “bio”)
