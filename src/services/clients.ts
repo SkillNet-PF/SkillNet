@@ -44,7 +44,6 @@ export async function registerUser(
   payload: ClientRegisterRequest
 ): Promise<AuthResponse> {
   return await http<AuthResponse>("/auth/registerClient", {
-    body: JSON.stringify(payload),
   });
 }
 

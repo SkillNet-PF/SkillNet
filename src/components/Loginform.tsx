@@ -90,7 +90,6 @@ function LoginForm() {
         closeLoading();
         toast("Sesión iniciada", "success");
         navigate("/perfil");
-      } else {
         const msg = "Credenciales inválidas. Intenta nuevamente.";
         setError(msg);
         alertError("No pudimos iniciar sesión", msg);
