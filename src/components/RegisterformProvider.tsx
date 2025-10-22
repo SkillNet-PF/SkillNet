@@ -162,7 +162,6 @@ function RegisterformProvider() {
         horarios: horariosCSV,
         // Backend espera 'category' (nombre), pero nuestra UI maneja ID
         category: categories.find((c) => c.categoryId === categoryId)?.name || "",
-        categoryId,
       });
       localStorage.setItem("accessToken", res.accessToken);
       alert("Registro de proveedor completado ✅");

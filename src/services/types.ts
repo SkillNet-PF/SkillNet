@@ -57,7 +57,6 @@ export interface ProviderRegisterRequest {
   horarios: string; // CSV e.g. "09:00,14:00"
   // Backend espera 'category' como nombre; mantenemos categoryId solo para UI
   category?: string;
-  categoryId?: string;
 }
 
 // ============== INTERFACES DE ENTIDADES ==============
