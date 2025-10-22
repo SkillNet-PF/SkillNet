@@ -97,9 +97,42 @@ export function mapProviderDashboardResponse(data: any): ServiceProvider {
 export async function registerProvider(
   payload: ProviderRegisterRequest
 ): Promise<AuthResponse> {
+  // Sanitizar: enviar solo propiedades permitidas por el backend
+  const {
+    name,
+    email,
+    password,
+    confirmPassword,
+    birthDate,
+    address,
+    phone,
+    rol,
+    serviceType,
+    about,
+    days,
+    horarios,
+    category,
+  } = payload as any;
+
+  const cleanPayload = {
+    name,
+    email,
+    password,
+    confirmPassword,
+    birthDate,
+    address,
+    phone,
+    rol,
+    serviceType,
+    about,
+    days,
+    horarios,
+    category,
+  };
+
   return await http<AuthResponse>("/auth/registerProvider", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify(cleanPayload),
   });
 }
 

@@ -43,7 +43,6 @@ export interface UpdateClientData {
 export async function registerUser(
   payload: ClientRegisterRequest
 ): Promise<AuthResponse> {
-  // Ajusta la ruta si tu backend usa guiones: "/auth/register-client"
   return await http<AuthResponse>("/auth/registerClient", {
     method: "POST",
     body: JSON.stringify(payload),
