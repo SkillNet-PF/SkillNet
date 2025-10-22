@@ -20,7 +20,6 @@ import {
   showLoading,
   closeLoading,
   alertError,
-  alertSuccess,
   toast,
 } from "../ui/alerts";
 

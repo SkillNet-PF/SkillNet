@@ -44,6 +44,8 @@ export async function registerUser(
   payload: ClientRegisterRequest
 ): Promise<AuthResponse> {
   return await http<AuthResponse>("/auth/registerClient", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
 
@@ -102,4 +104,3 @@ export async function deleteClient(
     method: "DELETE",
   });
 }
-
