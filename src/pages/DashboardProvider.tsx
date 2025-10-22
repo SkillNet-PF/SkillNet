@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   FaEdit,
   FaEnvelope,
@@ -12,8 +12,8 @@ import {
   FaStar,
   FaClock,
 } from "react-icons/fa";
-import { getDashboardProvider, updateProvider } from "../services/providers";
-import { ServiceProvider } from "../services/providers";
+import { getDashboardProvider, updateProvider, ServiceProvider } from "../services/providers";
+import { uploadAvatar } from "../services/auth";
 
 /* ====== Campo editable ====== */
 const EditableField = ({
@@ -39,6 +39,8 @@ const EditableField = ({
   saveChanges: () => void;
   isSaving: boolean;
 }) => {
+  const isEditing = editingField === field;
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 mb-3 border border-gray-100">
       <div className="flex items-center mb-2 text-gray-700 font-semibold">
@@ -46,13 +48,13 @@ const EditableField = ({
         {label}
       </div>
 
-      {editingField === field ? (
+      {isEditing ? (
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <input
             type="text"
-            value={tempValues[field] || ""}
+            value={tempValues[field] ?? ""}
             onChange={(e) =>
-              setTempValues({ ...tempValues, [field]: e.target.value })
+              setTempValues((prev: any) => ({ ...prev, [field]: e.target.value }))
             }
             className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-300"
           />
@@ -60,7 +62,7 @@ const EditableField = ({
             <button
               onClick={saveChanges}
               disabled={isSaving}
-              className="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 flex items-center gap-1"
+              className="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 flex items-center gap-1 disabled:opacity-60"
             >
               <FaSave />
               {isSaving ? "Guardando..." : "Guardar"}
@@ -75,10 +77,11 @@ const EditableField = ({
         </div>
       ) : (
         <div className="flex justify-between items-center text-gray-600">
-          <span>{currentValue || "No especificado"}</span>
+          <span>{currentValue?.toString() || "No especificado"}</span>
           <button
             onClick={() => setEditingField(field)}
             className="text-blue-500 hover:text-blue-600"
+            title={`Editar ${label}`}
           >
             <FaEdit />
           </button>
@@ -95,6 +98,8 @@ export default function DashboardProvider() {
   const [tempValues, setTempValues] = useState<Record<string, any>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Cargar datos desde el backend
   useEffect(() => {
@@ -108,9 +113,9 @@ export default function DashboardProvider() {
           birthDate: data.birthDate?.split("T")[0] || "",
           address: data.address || "",
           phone: data.phone || "",
-          category: data.category?.name || "",
+          category: data.category?.name || "", // mostramos nombre; si manejan categoryId pueden ajustar aquí
           about: data.about || "",
-          dias: Array.isArray(data.dias) ? data.dias.join(", ") : "",
+          dias: Array.isArray(data.dias) ? data.dias.join(", ") : data.dias || "",
           horarios: Array.isArray(data.horarios)
             ? data.horarios.join(", ")
             : data.horarios || "",
@@ -130,25 +135,24 @@ export default function DashboardProvider() {
     setIsSaving(true);
 
     try {
-      const updates: Record<string, any> = {
-        [editingField]: tempValues[editingField],
-      };
+      const updates: Record<string, any> = {};
 
       if (editingField === "dias") {
-        updates.dias = tempValues.dias
-          ?.split(",")
+        updates.dias = (tempValues.dias ?? "")
+          .split(",")
           .map((s: string) => s.trim())
           .filter(Boolean);
-      }
-      if (editingField === "horarios") {
-        updates.horarios = tempValues.horarios
-          ?.split(",")
+      } else if (editingField === "horarios") {
+        updates.horarios = (tempValues.horarios ?? "")
+          .split(",")
           .map((s: string) => s.trim())
           .filter(Boolean);
+      } else {
+        updates[editingField] = tempValues[editingField];
       }
 
       const updated = await updateProvider(provider.userId, updates);
-      setProvider({ ...provider, ...updated });
+      setProvider((prev) => (prev ? { ...prev, ...updated } : prev));
       setEditingField(null);
       alert("✅ Cambios guardados correctamente");
     } catch (error) {
@@ -156,6 +160,27 @@ export default function DashboardProvider() {
       alert("❌ No se pudo guardar el cambio.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Avatar
+  const handleAvatarButton = () => fileInputRef.current?.click();
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !provider?.userId) return;
+    try {
+      setIsUploading(true);
+      const resp = await uploadAvatar(provider.userId, file);
+      const newUrl = resp?.imgProfile || resp?.url || null;
+      setProvider((prev) => (prev ? { ...prev, imgProfile: newUrl ?? prev.imgProfile } : prev));
+      alert("📸 Avatar actualizado");
+    } catch (err) {
+      console.error(err);
+      alert("No se pudo subir el avatar");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -180,7 +205,7 @@ export default function DashboardProvider() {
         </p>
       </div>
 
-      {/* TARJETAS DE RESUMEN (usando datos del backend) */}
+      {/* TARJETAS DE RESUMEN */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-xl p-5 shadow-md border-t-4 border-yellow-400 flex flex-col items-center">
           <span className="text-gray-500 text-sm mb-1">VALORACIÓN PROMEDIO</span>
@@ -213,12 +238,26 @@ export default function DashboardProvider() {
               <img
                 src={provider.imgProfile || "https://via.placeholder.com/150"}
                 alt="Foto de perfil"
-                className="w-28 h-28 rounded-full border-4 border-yellow-400"
+                className="w-28 h-28 rounded-full border-4 border-yellow-400 object-cover"
               />
-              <button className="absolute bottom-1 right-1 bg-yellow-400 text-white p-2 rounded-full hover:bg-yellow-500">
+              <button
+                onClick={handleAvatarButton}
+                className="absolute bottom-1 right-1 bg-yellow-400 text-white p-2 rounded-full hover:bg-yellow-500"
+                title="Cambiar foto"
+              >
                 <FaCamera />
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
             </div>
+            {isUploading && (
+              <p className="text-sm text-blue-600 mt-1">Subiendo imagen...</p>
+            )}
             <h2 className="text-lg font-semibold text-gray-800">
               {provider.name}
             </h2>

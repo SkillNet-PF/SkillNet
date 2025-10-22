@@ -23,5 +23,15 @@ export async function http<T>(path: string, options?: RequestInit): Promise<T> {
     throw error;
   }
 
-  return (await res.json()) as T;
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return (await res.json()) as T;
+  }
+
+  const text = await res.text().catch(() => "");
+  const err: any = new Error(
+    `Unexpected non-JSON response from ${fullUrl}: ${text?.slice(0, 120)}`
+  );
+  err.status = res.status;
+  throw err;
 }

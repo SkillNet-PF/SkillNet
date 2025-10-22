@@ -115,9 +115,46 @@ export async function createProvider(
 
 // Obtener todos los proveedores
 export async function getAllProviders(): Promise<ProvidersListResponse> {
-  return await http<ProvidersListResponse>("/serviceprovider", {
-    method: "GET",
-  });
+  const res = await http<any>("/serviceprovider", { method: "GET" });
+
+  const normalize = (p: any): ServiceProvider => {
+    const cat = p?.category;
+    const category = cat
+      ? {
+          categoryId: cat?.categoryId ?? cat?.CategoryID ?? cat?.id ?? "",
+          name: cat?.name ?? cat?.Name ?? "",
+          description: cat?.description ?? cat?.Description ?? undefined,
+        }
+      : undefined;
+
+    return {
+      userId: p.userId,
+      imgProfile: p.imgProfile,
+      name: p.name,
+      birthDate: p.birthDate,
+      email: p.email,
+      address: p.address,
+      phone: p.phone,
+      rol: "provider",
+      isActive: !!p.isActive,
+      serviceType: p.serviceType,
+      about: p.bio ?? p.about,
+      dias: Array.isArray(p.dias) ? p.dias : [],
+      horarios: Array.isArray(p.horarios) ? p.horarios : [],
+      category,
+    } as ServiceProvider;
+  };
+
+  if (Array.isArray(res)) {
+    return { providers: res.map(normalize) } as ProvidersListResponse;
+  }
+
+  if (Array.isArray(res?.providers)) {
+    return { ...res, providers: res.providers.map(normalize) } as ProvidersListResponse;
+  }
+
+  // Fallback: estructura inesperada
+  return { providers: [] } as ProvidersListResponse;
 }
 
 // Obtener proveedor específico por ID
