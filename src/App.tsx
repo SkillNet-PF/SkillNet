@@ -13,6 +13,10 @@ import RequestAppointment from "./pages/RequestAppointment";
 import DashboardAdmin from "./pages/admin/DashboardAdmin";
 import ProfileRouter from "./pages/ProfileRouter";
 import ProviderProfile from "./pages/DashboardProvider";
+import SubscriptionPlans from "./pages/SubscriptionPlans";
+import CheckoutPage from "./pages/CheckoutPage";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
 
 function App() {
   return (
@@ -31,7 +35,10 @@ function App() {
           <Route path="/admin/dashboard" element={<DashboardAdmin />} />
 
           {/* Proveedor (nuevo dashboard directo) */}
-          <Route path="/serviceprovider/dashboard" element={<ProviderProfile />} />
+          <Route
+            path="/serviceprovider/dashboard"
+            element={<ProviderProfile />}
+          />
 
           {/* Perfil centralizado: decide dashboard por rol */}
           <Route path="/perfil" element={<ProfileRouter />} />
@@ -40,6 +47,10 @@ function App() {
           <Route path="/solicitar" element={<RequestAppointment />} />
           <Route path="/mis-turnos" element={<MyAppointments />} />
           <Route path="/agenda" element={<ProviderAgenda />} />
+          <Route path="/suscripciones" element={<SubscriptionPlans />} />
+          <Route path="/pago/checkout" element={<CheckoutPage />} />
+          <Route path="/pago/success" element={<PaymentSuccess />} />
+          <Route path="/pago/cancel" element={<PaymentCancel />} />
 
           {/* 404 */}
           <Route path="*" element={<NotFound />} />
