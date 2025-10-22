@@ -1,10 +1,10 @@
 import { http } from "./http";
 import { AuthResponse, ProviderRegisterRequest } from "./types";
 
-// Interfaces para proveedores
+
 export interface ServiceProvider {
   userId: string;
-  imgProfile?: string;
+  imgProfile?: string | null;
   name: string;
   birthDate: string;
   email: string;
@@ -12,8 +12,8 @@ export interface ServiceProvider {
   phone: string;
   rol: "provider";
   isActive: boolean;
-  serviceType: string;
-  about: string; // Correcto: "about" no "bio"
+  serviceType?: string;
+  about: string;
   dias: string[];
   horarios: string[];
   category?: {
@@ -21,6 +21,9 @@ export interface ServiceProvider {
     name: string;
     description?: string;
   };
+  schedule?: any[];
+  confirmedAppointments?: number;
+  pendingAppointments?: number;
 }
 
 export interface ProvidersListResponse {
@@ -51,7 +54,46 @@ export interface ProviderSearchFilters {
   horarios?: string;
 }
 
-// Registro de proveedor - Actualizado para coincidir con backend
+// ======================================================
+// 🧠 Adaptador de datos desde el backend
+// ======================================================
+export function mapProviderDashboardResponse(data: any): ServiceProvider {
+  const p = data.provider;
+
+  const mappedProvider: ServiceProvider = {
+    userId: p.userId,
+    imgProfile: p.imgProfile,
+    name: p.name,
+    birthDate: p.birthDate,
+    email: p.email,
+    address: p.address,
+    phone: p.phone,
+    rol: p.rol,
+    isActive: p.isActive,
+    serviceType: p.category?.Name || "",
+    about: p.bio || "",
+    dias: p.dias || [],
+    horarios: p.horarios || [],
+    category: p.category
+      ? {
+          categoryId: p.category.CategoryID,
+          name: p.category.Name,
+          description: "",
+        }
+      : undefined,
+    schedule: p.schedule || [],
+    confirmedAppointments: data.confirmedAppointments,
+    pendingAppointments: data.pendingAppointments,
+  };
+
+  return mappedProvider;
+}
+
+// ======================================================
+// 🧾 Endpoints
+// ======================================================
+
+// Registro de proveedor
 export async function registerProvider(
   payload: ProviderRegisterRequest
 ): Promise<AuthResponse> {
@@ -122,6 +164,12 @@ export async function getProviderById(
   return await http<ServiceProvider>(`/serviceprovider/${providerId}`, {
     method: "GET",
   });
+}
+
+// ✅ Nuevo: Obtener dashboard del proveedor (ya mapeado)
+export async function getDashboardProvider(): Promise<ServiceProvider> {
+  const data = await http(`/serviceprovider/dashboard`, { method: "GET" });
+  return mapProviderDashboardResponse(data);
 }
 
 // Actualizar proveedor
