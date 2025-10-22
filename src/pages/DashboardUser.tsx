@@ -1,38 +1,47 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
-  FaEdit,
-  FaEnvelope,
-  FaUser,
   FaCamera,
   FaClipboardList,
-  FaMapMarkerAlt,
-  FaPhone,
-  FaBirthdayCake,
   FaCheckCircle,
   FaCreditCard,
   FaCalendarAlt,
+  FaUser,
+  FaEnvelope,
+  FaBirthdayCake,
+  FaMapMarkerAlt,
+  FaPhone,
   FaSave,
   FaTimes,
 } from "react-icons/fa";
-import { Link } from "react-router-dom";
 import { useAuthContext } from "../contexts/AuthContext";
 import { uploadAvatar, updateUserProfile } from "../services/auth";
+import {
+  showLoading,
+  closeLoading,
+  alertSuccess,
+  alertError,
+} from "../ui/alerts";
 
-function UserProfile() {
+function DashboardUser() {
   const { user, setUser, role } = useAuthContext();
-
-  // Normaliza el shape del usuario por si viene como { user }, { data } o directo
   const profile: any =
     (user as any)?.user || (user as any)?.data || user || null;
 
+  // ---- estado de UI ----
+  const [active, setActive] = useState<number>(0); // pestañas: 0 Resumen, 1 Datos, 2 Historial
+  const tabs = ["Resumen", "Datos", "Historial"];
+
+  // avatar
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [imgBust, setImgBust] = useState<number>(0);
 
-  // --- edición inline ---
+  // edición inline
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [tempValues, setTempValues] = useState({
     name: profile?.name || "",
     email: profile?.email || "",
@@ -40,9 +49,7 @@ function UserProfile() {
     address: profile?.address || "",
     phone: profile?.phone || "",
   });
-  const [isSaving, setIsSaving] = useState(false);
 
-  // Re-sincroniza tempValues cuando se hidrata/cambia el profile
   useEffect(() => {
     if (!profile) return;
     setTempValues({
@@ -54,51 +61,50 @@ function UserProfile() {
     });
   }, [profile]);
 
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString("es-ES", {
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString("es-ES", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
 
+  const now = new Date();
+  const endDate = profile?.endDate ? new Date(profile.endDate) : null;
+  const isSubscriptionActive =
+    !!profile?.paymentStatus && !!endDate && endDate > now;
+  const planName =
+    profile?.suscription?.Name || profile?.subscription?.name || "Sin plan";
+
   const handleCameraClick = () => fileInputRef.current?.click();
-
-  const handleFileSelect = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      alert("Por favor selecciona un archivo de imagen válido.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      alert("La imagen debe ser menor a 5MB.");
-      return;
-    }
-
+    if (!file.type.startsWith("image/"))
+      return alertError("Archivo inválido", "Selecciona una imagen.");
+    if (file.size > 5 * 1024 * 1024)
+      return alertError("Archivo muy grande", "Máx. 5 MB.");
     setIsUploading(true);
     try {
-      // tu servicio actual devuelve { imgProfile }
+      showLoading("Subiendo imagen...");
       const result = await uploadAvatar(file);
-
       if (user) {
-        // Conserva el shape original del contexto
         const raw: any = user;
         const next = raw?.user
           ? { ...raw, user: { ...raw.user, imgProfile: result.imgProfile } }
           : raw?.data
           ? { ...raw, data: { ...raw.data, imgProfile: result.imgProfile } }
           : { ...raw, imgProfile: result.imgProfile };
-
         setUser(next);
-        setImgBust(Date.now()); // fuerza que el <img> no use caché
+        setImgBust(Date.now());
       }
-      alert("¡Imagen de perfil actualizada correctamente!");
-    } catch (error: any) {
-      alert(`Error subiendo la imagen: ${error?.message || "desconocido"}`);
+      await alertSuccess("¡Imagen actualizada!", "Se guardó correctamente.");
+    } catch (err: any) {
+      await alertError(
+        "No se pudo subir",
+        err?.message || "Inténtalo más tarde."
+      );
     } finally {
+      closeLoading();
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -114,511 +120,421 @@ function UserProfile() {
       phone: profile?.phone || "",
     });
   };
-
-  const cancelEditing = () => {
-    setEditingField(null);
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setTempValues((prev) => ({ ...prev, [field]: value }));
-  };
+  const cancelEditing = () => setEditingField(null);
+  const handleInputChange = (f: string, v: string) =>
+    setTempValues((prev) => ({ ...prev, [f]: v }));
 
   const saveChanges = async () => {
     if (!editingField || !profile?.userId) return;
     setIsSaving(true);
     try {
-      const updates = {
-        [editingField]: tempValues[editingField as keyof typeof tempValues],
-      };
-
+      showLoading("Guardando cambios...");
+      const updates = { [editingField]: (tempValues as any)[editingField] };
       await updateUserProfile(profile.userId, updates);
-
-      // Mantén el shape original del contexto al actualizar
       const raw: any = user;
       const next = raw?.user
         ? { ...raw, user: { ...raw.user, ...updates } }
         : raw?.data
         ? { ...raw, data: { ...raw.data, ...updates } }
         : { ...raw, ...updates };
-
       setUser(next);
       setEditingField(null);
-      alert("¡Campo actualizado correctamente!");
+      await alertSuccess("¡Listo!", "Campo actualizado.");
     } catch (e: any) {
-      alert(`Error al actualizar: ${e?.message || "desconocido"}`);
+      await alertError(
+        "No se pudo actualizar",
+        e?.message || "Inténtalo más tarde."
+      );
     } finally {
+      closeLoading();
       setIsSaving(false);
     }
   };
 
-  // Fallback mientras hidrata el contexto
-  if (!profile) {
-    return (
-      <div className="container mx-auto p-6 min-h-screen">
-        <p>Cargando perfil…</p>
-      </div>
-    );
-  }
+  if (!profile) return <div className="container mx-auto p-6">Cargando…</div>;
 
   return (
-    <div className="container mx-auto p-6 min-h-screen profile-page bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
-      <h1 className="text-4xl font-extrabold text-blue-900 dark:text-blue-200 mb-8 border-b-4 border-yellow-400 pb-2 dark:border-yellow-400">
-        {role === "provider" ? "Perfil de proveedor" : "Perfil de cliente"}
-      </h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* IZQUIERDA: historial */}
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-6 rounded-xl shadow-lg">
-            <h3 className="text-2xl font-semibold text-blue-800 dark:text-blue-100 mb-4 border-b pb-2 dark:border-slate-700 flex items-center space-x-2">
-              <FaClipboardList className="text-yellow-500" />
-              <span>Historial de Solicitudes</span>
-            </h3>
-
-            <div className="space-y-4">
-              {!profile ||
-              !profile.requests ||
-              profile.requests?.length === 0 ? (
-                <div className="text-center py-8">
-                  <FaClipboardList className="mx-auto text-6xl text-gray-300 dark:text-slate-600 mb-4" />
-                  <p className="text-gray-500 dark:text-slate-400 text-lg">
-                    No tienes solicitudes de servicios aún
-                  </p>
-                  <p className="text-gray-400 dark:text-slate-500 text-sm mt-2">
-                    ¡Explora nuestros proveedores y solicita tu primer servicio!
-                  </p>
-                </div>
-              ) : (
-                profile.requests.map((req: any) => (
-                  <div
-                    key={req.id}
-                    className="p-4 border rounded-lg flex justify-between items-center bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-gray-200 dark:border-slate-700 transition"
-                  >
-                    <div>
-                      <p className="font-semibold text-lg text-blue-900 dark:text-blue-200">
-                        {req.service}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-slate-400">
-                        Fecha de solicitud: {req.date}
-                      </p>
-                    </div>
-                    <Link
-                      to={`/request/${req.id}`}
-                      className="text-blue-600 dark:text-blue-400 hover:underline font-medium text-sm"
-                    >
-                      Ver Detalles &rarr;
-                    </Link>
-                  </div>
-                ))
-              )}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+      {/* HEADER */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+        <div className="container mx-auto px-6 py-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative w-20 h-20">
+                <img
+                  src={
+                    ((profile?.imgProfile || profile?.picture) ??
+                      "https://via.placeholder.com/150/0a58ca/FFFFFF?text=U") +
+                    (imgBust ? `?v=${imgBust}` : "")
+                  }
+                  className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
+                />
+                <button
+                  onClick={handleCameraClick}
+                  disabled={isUploading}
+                  className="absolute bottom-0 right-0 bg-yellow-400 text-blue-900 p-2 rounded-full border-2 border-white shadow"
+                  title={isUploading ? "Subiendo..." : "Cambiar foto"}
+                >
+                  <FaCamera />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-extrabold">
+                  {role === "provider"
+                    ? "Perfil de proveedor"
+                    : "Perfil de cliente"}
+                </h1>
+                <p className="opacity-90">{profile?.name || "Usuario"}</p>
+              </div>
             </div>
 
-            <div className="mt-4 text-right">
+            {/* Acciones rápidas */}
+            <div className="flex gap-2">
               <Link
-                to="/requests"
-                className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                to="/solicitar"
+                className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg backdrop-blur border border-white/20"
               >
-                Ver todo el historial &rarr;
+                Solicitar turno
+              </Link>
+              <Link
+                to="/suscripciones"
+                className="bg-yellow-400 hover:bg-yellow-300 text-blue-900 px-4 py-2 rounded-lg font-semibold"
+              >
+                Ver planes
               </Link>
             </div>
           </div>
-        </div>
 
-        {/* DERECHA: foto + datos */}
-        <div className="lg:col-span-1 space-y-8">
-          {/* Foto de perfil */}
-          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-6 rounded-xl shadow-lg text-center">
-            <div className="relative w-28 h-28 mx-auto mb-4">
-              <img
-                src={
-                  ((profile?.imgProfile || profile?.picture) ??
-                    "https://via.placeholder.com/150/0000FF/FFFFFF?text=U") +
-                  (imgBust ? `?v=${imgBust}` : "")
-                }
-                alt="Foto de Perfil"
-                className="w-full h-full rounded-full object-cover border-4 border-blue-600"
-              />
-              <button
-                onClick={handleCameraClick}
-                disabled={isUploading}
-                className={`absolute bottom-0 right-0 p-2 rounded-full text-blue-900 dark:text-slate-900 transition shadow-md border-2 border-white ${
-                  isUploading
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-yellow-400 hover:bg-yellow-300 cursor-pointer"
-                }`}
-                title={
-                  isUploading ? "Subiendo imagen..." : "Cambiar foto de perfil"
-                }
-              >
-                <FaCamera className="text-sm" />
-              </button>
+          {/* Métricas */}
+          <div className="grid grid-cols-3 gap-3 mt-6">
+            <div className="bg-white/10 rounded-xl p-4 text-center">
+              <div className="text-sm opacity-90">Servicios restantes</div>
+              <div className="text-2xl font-bold">
+                {profile?.servicesLeft ?? 0}
+              </div>
             </div>
-
-            {/* input file oculto */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-
-            {isUploading && (
-              <p className="text-sm text-blue-600 dark:text-blue-400 mb-2">
-                Subiendo imagen...
-              </p>
-            )}
-            {/* (El botón textual “Cambiar Foto de Perfil” fue removido) */}
+            <div className="bg-white/10 rounded-xl p-4 text-center">
+              <div className="text-sm opacity-90">Plan</div>
+              <div className="text-2xl font-bold">{planName}</div>
+            </div>
+            <div className="bg-white/10 rounded-xl p-4 text-center">
+              <div className="text-sm opacity-90">Estado</div>
+              <div className="text-2xl font-bold">
+                {isSubscriptionActive ? "Activa" : "No activa"}
+              </div>
+            </div>
           </div>
+        </div>
+      </div>
 
-          {/* Datos de cuenta */}
-          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-6 rounded-xl shadow-lg">
-            <h3 className="text-2xl font-semibold text-blue-800 dark:text-blue-100 mb-4 border-b pb-2 dark:border-slate-700">
-              Mis Datos de Cuenta
+      {/* CONTENIDO con Sidebar sticky + Tabs */}
+      <div className="container mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Sidebar (sticky) */}
+        <aside className="lg:col-span-4 space-y-4 lg:sticky lg:top-6 h-max">
+          {/* Suscripción compacta */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow p-5">
+            <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+              <FaCalendarAlt /> Mi suscripción
             </h3>
-
-            {/* Nombre */}
-            <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
-                <FaUser />
-                <span>Nombre Completo</span>
-              </h4>
-
-              {editingField === "name" ? (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={tempValues.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ingresa tu nombre completo"
-                  />
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={saveChanges}
-                      disabled={isSaving}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
-                    >
-                      <FaSave />
-                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
-                    </button>
-                    <button
-                      onClick={cancelEditing}
-                      disabled={isSaving}
-                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
-                    >
-                      <FaTimes />
-                      <span>Cancelar</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
-                  <p className="text-gray-700 dark:text-slate-200 font-medium">
-                    {profile?.name || "No especificado"}
-                  </p>
-                  <button
-                    onClick={() => startEditing("name")}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50 dark:hover:bg-slate-700"
-                    title="Editar nombre"
-                  >
-                    <FaEdit />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Email */}
-            <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
-                <FaEnvelope />
-                <span>Correo Electrónico</span>
-              </h4>
-
-              {editingField === "email" ? (
-                <div className="space-y-2">
-                  <input
-                    type="email"
-                    value={tempValues.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ingresa tu correo electrónico"
-                  />
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={saveChanges}
-                      disabled={isSaving}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
-                    >
-                      <FaSave />
-                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
-                    </button>
-                    <button
-                      onClick={cancelEditing}
-                      disabled={isSaving}
-                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
-                    >
-                      <FaTimes />
-                      <span>Cancelar</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
-                  <p className="text-gray-700 dark:text-slate-200 truncate">
-                    {profile?.email || "No especificado"}
-                  </p>
-                  <button
-                    onClick={() => startEditing("email")}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50 dark:hover:bg-slate-700"
-                    title="Editar correo"
-                  >
-                    <FaEdit />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Fecha de nacimiento */}
-            <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
-                <FaBirthdayCake />
-                <span>Fecha de Nacimiento</span>
-              </h4>
-
-              {editingField === "birthDate" ? (
-                <div className="space-y-2">
-                  <input
-                    type="date"
-                    value={tempValues.birthDate}
-                    onChange={(e) =>
-                      handleInputChange("birthDate", e.target.value)
-                    }
-                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={saveChanges}
-                      disabled={isSaving}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
-                    >
-                      <FaSave />
-                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
-                    </button>
-                    <button
-                      onClick={cancelEditing}
-                      disabled={isSaving}
-                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
-                    >
-                      <FaTimes />
-                      <span>Cancelar</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
-                  <p className="text-gray-700">
-                    {profile?.birthDate
-                      ? formatDate(profile.birthDate)
-                      : "No especificada"}
-                  </p>
-                  <button
-                    onClick={() => startEditing("birthDate")}
-                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
-                    title="Editar fecha de nacimiento"
-                  >
-                    <FaEdit />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Dirección */}
-            <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
-                <FaMapMarkerAlt />
-                <span>Dirección</span>
-              </h4>
-
-              {editingField === "address" ? (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={tempValues.address}
-                    onChange={(e) =>
-                      handleInputChange("address", e.target.value)
-                    }
-                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ingresa tu dirección"
-                  />
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={saveChanges}
-                      disabled={isSaving}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
-                    >
-                      <FaSave />
-                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
-                    </button>
-                    <button
-                      onClick={cancelEditing}
-                      disabled={isSaving}
-                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
-                    >
-                      <FaTimes />
-                      <span>Cancelar</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
-                  <p className="text-gray-700">
-                    {profile?.address || "No especificada"}
-                  </p>
-                  <button
-                    onClick={() => startEditing("address")}
-                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
-                    title="Editar dirección"
-                  >
-                    <FaEdit />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Teléfono */}
-            <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
-                <FaPhone />
-                <span>Teléfono</span>
-              </h4>
-
-              {editingField === "phone" ? (
-                <div className="space-y-2">
-                  <input
-                    type="tel"
-                    value={tempValues.phone}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                    className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ingresa tu teléfono"
-                  />
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={saveChanges}
-                      disabled={isSaving}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
-                    >
-                      <FaSave />
-                      <span>{isSaving ? "Guardando..." : "Guardar"}</span>
-                    </button>
-                    <button
-                      onClick={cancelEditing}
-                      disabled={isSaving}
-                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
-                    >
-                      <FaTimes />
-                      <span>Cancelar</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
-                  <p className="text-gray-700">
-                    {profile?.phone || "No especificado"}
-                  </p>
-                  <button
-                    onClick={() => startEditing("phone")}
-                    className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
-                    title="Editar teléfono"
-                  >
-                    <FaEdit />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Estado de la Cuenta */}
-            <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
-                <FaCheckCircle />
-                <span>Estado de la Cuenta</span>
-              </h4>
-              <div className="flex items-center space-x-2 bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
+            <div className="text-sm space-y-1">
+              <div>
+                <span className="font-medium">Plan:</span> {planName}
+              </div>
+              <div>
+                <span className="font-medium">Inicio:</span>{" "}
+                {profile?.startDate ? formatDate(profile.startDate) : "—"}
+              </div>
+              <div>
+                <span className="font-medium">Vence:</span>{" "}
+                {profile?.endDate ? formatDate(profile.endDate) : "—"}
+              </div>
+              <div className="flex items-center gap-2">
                 <span
-                  className={`w-3 h-3 rounded-full ${
-                    profile?.isActive ? "bg-green-500" : "bg-red-500"
+                  className={`w-2.5 h-2.5 rounded-full ${
+                    isSubscriptionActive ? "bg-green-500" : "bg-red-500"
                   }`}
                 />
-                <p className="text-gray-700 dark:text-slate-200">
-                  {profile?.isActive ? "Activa" : "Inactiva"}
-                </p>
+                {isSubscriptionActive ? "Al día" : "Pendiente"}
               </div>
             </div>
-
-            {/* Servicios disponibles */}
-            {profile?.servicesLeft !== undefined && (
-              <div className="mb-4">
-                <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
-                  <FaCreditCard />
-                  <span>Servicios Disponibles</span>
-                </h4>
-                <p className="bg-blue-50 dark:bg-slate-800 p-3 rounded-lg border border-blue-200 dark:border-slate-700 text-blue-700 dark:text-blue-300 font-semibold">
-                  {profile.servicesLeft} servicios restantes
-                </p>
-              </div>
-            )}
-
-            {/* Suscripción */}
-            {profile?.startDate && profile?.endDate && (
-              <div className="mb-4">
-                <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
-                  <FaCalendarAlt />
-                  <span>Suscripción</span>
-                </h4>
-                <div className="bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 space-y-2">
-                  <p className="text-gray-700 dark:text-slate-200">
-                    <span className="font-medium">Inicio:</span>{" "}
-                    {formatDate(profile.startDate)}
-                  </p>
-                  <p className="text-gray-700 dark:text-slate-200">
-                    <span className="font-medium">Vencimiento:</span>{" "}
-                    {formatDate(profile.endDate)}
-                  </p>
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className={`w-3 h-3 rounded-full ${
-                        profile.paymentStatus ? "bg-green-500" : "bg-red-500"
-                      }`}
-                    />
-                    <p className="text-gray-700 dark:text-slate-200">
-                      Pago: {profile.paymentStatus ? "Al día" : "Pendiente"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Rol */}
-            <div className="mb-4">
-              <h4 className="text-lg font-medium text-blue-900 dark:text-blue-200 flex items-center space-x-2 mb-2">
-                <FaUser />
-                <span>Tipo de Cuenta</span>
-              </h4>
-              <p className="bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 capitalize">
-                {profile?.rol === "client"
-                  ? "Cliente"
-                  : profile?.rol === "provider"
-                  ? "Proveedor"
-                  : profile?.rol || "No especificado"}
-              </p>
+            <div className="flex gap-2 mt-4">
+              <Link
+                to="/suscripciones"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center px-3 py-2 rounded-lg"
+              >
+                Cambiar plan
+              </Link>
+              <Link
+                to="/pago/checkout"
+                className="flex-1 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-center px-3 py-2 rounded-lg"
+              >
+                Pasarela
+              </Link>
             </div>
-
-            {/* (El botón global “Editar Perfil” fue removido) */}
           </div>
-        </div>
+
+          {/* Estado de cuenta */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow p-5">
+            <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+              <FaCheckCircle /> Estado de la cuenta
+            </h3>
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${
+                  profile?.isActive ? "bg-green-500" : "bg-red-500"
+                }`}
+              />
+              {profile?.isActive ? "Activa" : "Inactiva"}
+            </div>
+          </div>
+        </aside>
+
+        {/* Main */}
+        <main className="lg:col-span-8 space-y-6">
+          {/* Tabs */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow">
+            <div className="flex gap-4 border-b dark:border-slate-700 px-5 pt-4">
+              {tabs.map((t, i) => (
+                <button
+                  key={t}
+                  onClick={() => setActive(i)}
+                  className={`px-3 pb-3 -mb-px ${
+                    active === i
+                      ? "border-b-2 border-blue-600 text-blue-700 dark:text-blue-300 font-semibold"
+                      : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+
+            {/* Panels */}
+            <div className="p-5">
+              {active === 0 && (
+                <div className="grid md:grid-cols-2 gap-4">
+                  <Card title="Servicios disponibles" icon={<FaCreditCard />}>
+                    <div className="text-3xl font-extrabold text-blue-700 dark:text-blue-300">
+                      {profile?.servicesLeft ?? 0}
+                    </div>
+                    <p className="text-sm opacity-70">
+                      Se renuevan con tu plan.
+                    </p>
+                  </Card>
+
+                  <Card title="Próximo vencimiento" icon={<FaCalendarAlt />}>
+                    <div className="text-lg font-semibold">
+                      {profile?.endDate ? formatDate(profile.endDate) : "—"}
+                    </div>
+                    <p className="text-sm opacity-70">
+                      Mantén tu plan activo para pedir turnos.
+                    </p>
+                  </Card>
+                </div>
+              )}
+
+              {active === 1 && (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {renderEditable(
+                    "name",
+                    "Nombre completo",
+                    profile?.name,
+                    <FaUser />,
+                    tempValues,
+                    handleInputChange,
+                    startEditing,
+                    saveChanges,
+                    cancelEditing,
+                    editingField,
+                    isSaving
+                  )}
+                  {renderEditable(
+                    "email",
+                    "Correo electrónico",
+                    profile?.email,
+                    <FaEnvelope />,
+                    tempValues,
+                    handleInputChange,
+                    startEditing,
+                    saveChanges,
+                    cancelEditing,
+                    editingField,
+                    isSaving,
+                    "email"
+                  )}
+                  {renderEditable(
+                    "birthDate",
+                    "Fecha de nacimiento",
+                    profile?.birthDate ? formatDate(profile.birthDate) : "",
+                    <FaBirthdayCake />,
+                    tempValues,
+                    handleInputChange,
+                    startEditing,
+                    saveChanges,
+                    cancelEditing,
+                    editingField,
+                    isSaving,
+                    "date"
+                  )}
+                  {renderEditable(
+                    "address",
+                    "Dirección",
+                    profile?.address,
+                    <FaMapMarkerAlt />,
+                    tempValues,
+                    handleInputChange,
+                    startEditing,
+                    saveChanges,
+                    cancelEditing,
+                    editingField,
+                    isSaving
+                  )}
+                  {renderEditable(
+                    "phone",
+                    "Teléfono",
+                    profile?.phone,
+                    <FaPhone />,
+                    tempValues,
+                    handleInputChange,
+                    startEditing,
+                    saveChanges,
+                    cancelEditing,
+                    editingField,
+                    isSaving,
+                    "tel"
+                  )}
+                </div>
+              )}
+
+              {active === 2 && (
+                <div>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <FaClipboardList /> Historial de solicitudes
+                  </h4>
+                  {!profile?.requests || profile.requests.length === 0 ? (
+                    <div className="text-center py-10 opacity-70">
+                      No tienes solicitudes aún.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {profile.requests.map((r: any) => (
+                        <div
+                          key={r.id}
+                          className="p-4 rounded-lg border dark:border-slate-700 bg-gray-50 dark:bg-slate-800 flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-semibold">{r.service}</div>
+                            <div className="text-sm opacity-70">
+                              Fecha: {r.date}
+                            </div>
+                          </div>
+                          <Link
+                            to={`/request/${r.id}`}
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
+                          >
+                            Ver detalle →
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );
 }
 
-export default UserProfile;
+export default DashboardUser;
+
+/** ---------- UI helpers ---------- */
+function Card({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="p-4 border rounded-xl bg-gray-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="text-blue-600 dark:text-blue-300">{icon}</div>
+        <h4 className="font-semibold">{title}</h4>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function renderEditable(
+  key: string,
+  label: string,
+  value: string,
+  icon: React.ReactNode,
+  temp: any,
+  onChange: (k: string, v: string) => void,
+  start: (k: string) => void,
+  save: () => void,
+  cancel: () => void,
+  editing: string | null,
+  saving: boolean,
+  type: "text" | "email" | "date" | "tel" = "text"
+) {
+  return (
+    <div className="p-4 border rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+      <h5 className="text-sm font-semibold flex items-center gap-2 mb-2">
+        <span className="text-blue-600 dark:text-blue-300">{icon}</span>
+        {label}
+      </h5>
+
+      {editing === key ? (
+        <div className="space-y-2">
+          <input
+            type={type}
+            value={(temp as any)[key]}
+            onChange={(e) => onChange(key, e.target.value)}
+            className="w-full p-2 border rounded-lg bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={save}
+              disabled={saving}
+              className="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 flex items-center gap-2"
+            >
+              <FaSave /> {saving ? "Guardando..." : "Guardar"}
+            </button>
+            <button
+              onClick={cancel}
+              disabled={saving}
+              className="px-3 py-1.5 rounded-lg bg-gray-600 text-white hover:bg-gray-700 disabled:bg-gray-400 flex items-center gap-2"
+            >
+              <FaTimes /> Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between">
+          <span className="opacity-90">{value || "No especificado"}</span>
+          <button
+            onClick={() => start(key)}
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Editar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

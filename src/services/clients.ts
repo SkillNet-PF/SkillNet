@@ -39,12 +39,11 @@ export interface UpdateClientData {
   confirmNewPassword?: string;
 }
 
-// Registro de cliente - Actualizado para coincidir con backend
+// Registro de cliente: alineado con lo que envías desde el form
 export async function registerUser(
   payload: ClientRegisterRequest
 ): Promise<AuthResponse> {
-  return await http<AuthResponse>("/auth/register", {
-    method: "POST",
+  return await http<AuthResponse>("/auth/registerClient", {
     body: JSON.stringify(payload),
   });
 }
@@ -68,9 +67,9 @@ export async function getAllClients(
   if (filters?.subscription)
     params.append("subscription", filters.subscription);
   if (filters?.isActive !== undefined)
-    params.append("isActive", filters.isActive.toString());
+    params.append("isActive", String(filters.isActive));
   if (filters?.paymentStatus !== undefined)
-    params.append("paymentStatus", filters.paymentStatus.toString());
+    params.append("paymentStatus", String(filters.paymentStatus));
 
   return await http<ClientsListResponse>(`/clients?${params.toString()}`, {
     method: "GET",
@@ -79,9 +78,7 @@ export async function getAllClients(
 
 // Obtener perfil de cliente específico
 export async function getClientProfile(clientId: string): Promise<Client> {
-  return await http<Client>(`/clients/profile/${clientId}`, {
-    method: "GET",
-  });
+  return await http<Client>(`/clients/profile/${clientId}`, { method: "GET" });
 }
 
 // Actualizar perfil de cliente
@@ -106,3 +103,4 @@ export async function deleteClient(
     method: "DELETE",
   });
 }
+
