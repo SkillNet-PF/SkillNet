@@ -113,7 +113,7 @@ export default function DashboardProvider() {
           birthDate: data.birthDate?.split("T")[0] || "",
           address: data.address || "",
           phone: data.phone || "",
-          category: data.category?.name || "", // mostramos nombre; si manejan categoryId pueden ajustar aquí
+          category: data.category?.name || "",
           about: data.about || "",
           dias: Array.isArray(data.dias) ? data.dias.join(", ") : data.dias || "",
           horarios: Array.isArray(data.horarios)

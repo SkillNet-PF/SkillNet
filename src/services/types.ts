@@ -31,8 +31,8 @@ export interface ClientRegisterRequest {
   rol: "client";
 
   // Campos específicos de RegisterClientDto
-  paymentMethod: string; // "tarjeta_credito", "paypal", "transferencia"
-  subscription: string; // "basic", "standard", "premium"
+  paymentMethod?: string; // "tarjeta_credito", "paypal", "transferencia"
+  subscription?: string; // "basic", "standard", "premium"
 }
 
 // Interface para registro de proveedor (coincide con ProviderRegisterDto)

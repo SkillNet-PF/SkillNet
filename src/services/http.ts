@@ -1,4 +1,4 @@
-const API_URL = "/api";
+const API_URL = (import.meta.env.VITE_API_URL as string) || "/api";
 
 export async function http<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem("accessToken");
@@ -8,8 +8,9 @@ export async function http<T>(path: string, options?: RequestInit): Promise<T> {
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  // ✅ Corrige la URL para que siempre tenga la barra
-  const fullUrl = `${API_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const base = API_URL.endsWith("/") ? API_URL.slice(0, -1) : API_URL;
+  const fullPath = path.startsWith("/") ? path : `/${path}`;
+  const fullUrl = `${base}${fullPath}`;
 
   const res = await fetch(fullUrl, {
     ...options,
