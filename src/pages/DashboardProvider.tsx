@@ -12,7 +12,11 @@ import {
   FaStar,
   FaClock,
 } from "react-icons/fa";
-import { getDashboardProvider, updateProvider, ServiceProvider } from "../services/providers";
+import {
+  getDashboardProvider,
+  updateProvider,
+  ServiceProvider,
+} from "../services/providers";
 import { uploadAvatar } from "../services/auth";
 
 /* ====== Campo editable ====== */
@@ -54,7 +58,10 @@ const EditableField = ({
             type="text"
             value={tempValues[field] ?? ""}
             onChange={(e) =>
-              setTempValues((prev: any) => ({ ...prev, [field]: e.target.value }))
+              setTempValues((prev: any) => ({
+                ...prev,
+                [field]: e.target.value,
+              }))
             }
             className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-300"
           />
@@ -115,7 +122,9 @@ export default function DashboardProvider() {
           phone: data.phone || "",
           category: data.category?.name || "",
           about: data.about || "",
-          dias: Array.isArray(data.dias) ? data.dias.join(", ") : data.dias || "",
+          dias: Array.isArray(data.dias)
+            ? data.dias.join(", ")
+            : data.dias || "",
           horarios: Array.isArray(data.horarios)
             ? data.horarios.join(", ")
             : data.horarios || "",
@@ -168,12 +177,18 @@ export default function DashboardProvider() {
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !provider?.userId) return;
+    if (!file) return;
+
     try {
       setIsUploading(true);
-      const resp = await uploadAvatar(provider.userId, file);
-      const newUrl = resp?.imgProfile || resp?.url || null;
-      setProvider((prev) => (prev ? { ...prev, imgProfile: newUrl ?? prev.imgProfile } : prev));
+      // La API actual de uploadAvatar espera SOLO el archivo
+      const resp: { imgProfile?: string } = await uploadAvatar(file);
+
+      const newUrl = resp?.imgProfile ?? provider?.imgProfile ?? null;
+      setProvider((prev) =>
+        prev ? { ...prev, imgProfile: newUrl ?? prev.imgProfile } : prev
+      );
+
       alert("📸 Avatar actualizado");
     } catch (err) {
       console.error(err);
@@ -189,7 +204,9 @@ export default function DashboardProvider() {
 
   if (!provider)
     return (
-      <p className="text-center mt-10 text-red-500">No se encontró el perfil.</p>
+      <p className="text-center mt-10 text-red-500">
+        No se encontró el perfil.
+      </p>
     );
 
   return (
@@ -208,7 +225,9 @@ export default function DashboardProvider() {
       {/* TARJETAS DE RESUMEN */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-xl p-5 shadow-md border-t-4 border-yellow-400 flex flex-col items-center">
-          <span className="text-gray-500 text-sm mb-1">VALORACIÓN PROMEDIO</span>
+          <span className="text-gray-500 text-sm mb-1">
+            VALORACIÓN PROMEDIO
+          </span>
           <span className="text-3xl font-bold text-yellow-500 flex items-center gap-2">
             4.5/5 <FaStar />
           </span>

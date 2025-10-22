@@ -2,6 +2,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
+// SweetAlert2 helpers
+import { showLoading, closeLoading, toast, alertError } from "../ui/alerts";
+
 type Role = "visitor" | "user" | "provider";
 
 interface AuthUser {
@@ -48,12 +51,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    showLoading("Cargando perfil...");
+
     import("../services/http").then(({ http }) => {
       http<{ user: AuthUser }>("/auth/me")
         .then((res) => {
           console.log("Usuario cargado:", res.user);
           setUser(res.user);
           setRole(res.user?.rol === "provider" ? "provider" : "user");
+          toast("Sesión restaurada", "success");
         })
         .catch((err: any) => {
           console.error("Error obteniendo datos del usuario:", err);
@@ -61,9 +67,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem("accessToken");
             setRole("visitor");
             setUser(null);
+          } else {
+            const msg =
+              err?.response?.data?.message ||
+              err?.message ||
+              "No se pudo cargar tu perfil.";
+            alertError("Error de autenticación", String(msg));
           }
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          closeLoading();
+          setLoading(false);
+        });
     });
   }, []);
 
@@ -73,12 +88,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token || user) return;
 
     setLoading(true);
+    showLoading("Actualizando sesión...");
+
     import("../services/http")
       .then(({ http }) => http<{ user: AuthUser }>("/auth/me"))
       .then((res) => {
         const profile = res.user;
         setUser(profile);
         setRole(profile?.rol === "provider" ? "provider" : "user");
+        toast("Sesión actualizada", "success");
       })
       .catch((err: any) => {
         console.error("Error refrescando datos del usuario:", err);
@@ -86,15 +104,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem("accessToken");
           setUser(null);
           setRole("visitor");
+        } else {
+          const msg =
+            err?.response?.data?.message ||
+            err?.message ||
+            "No se pudo actualizar tu sesión.";
+          alertError("Error de autenticación", String(msg));
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        closeLoading();
+        setLoading(false);
+      });
   }, [localStorage.getItem("accessToken")]);
 
+  // Logout con feedback
   const logout = () => {
     setRole("visitor");
     setUser(null);
     localStorage.removeItem("accessToken");
+    toast("Sesión cerrada correctamente", "info");
   };
 
   // Pantalla de carga global

@@ -2,11 +2,32 @@
 
 import React, { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { Box, Stack, TextField, Button, IconButton, InputAdornment, Alert, Typography, Paper } from "@mui/material";
+import {
+  Box,
+  Stack,
+  TextField,
+  Button,
+  IconButton,
+  InputAdornment,
+  Alert,
+  Typography,
+  Paper,
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { registerUser } from "../services/clients";
 import { auth0RegisterUrl } from "../services/auth";
 
+// SweetAlert2 helpers (tuyos)
+import {
+  showLoading,
+  closeLoading,
+  alertSuccess,
+  alertError,
+} from "../ui/alerts";
+
 function RegisterformUser() {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: "",
     birthDate: "",
@@ -21,6 +42,7 @@ function RegisterformUser() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Validaciones dinámicas de contraseña
   const [passwordChecks, setPasswordChecks] = useState({
     minLength: false,
     uppercase: false,
@@ -29,14 +51,12 @@ function RegisterformUser() {
     specialChar: false,
   });
 
-  // ✅ Handler único compatible con todos los TextField (con o sin "select")
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
     setError("");
-
 
     if (name === "password") {
       setPasswordChecks({
@@ -49,32 +69,60 @@ function RegisterformUser() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validate = () => {
+    if (!formData.name || !formData.email || !formData.password) {
+      const msg = "Por favor completa todos los campos obligatorios.";
+      setError(msg);
+      alertError("Validación", msg);
+      return false;
+    }
 
-    // Validaciones básicas
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+    if (!emailRe.test(formData.email)) {
+      const msg = "Por favor ingresa un correo electrónico válido.";
+      setError(msg);
+      alertError("Correo inválido", msg);
+      return false;
+    }
+
+    if (formData.password.length < 6) {
+      const msg = "La contraseña debe tener al menos 6 caracteres.";
+      setError(msg);
+      alertError("Contraseña débil", msg);
+      return false;
+    }
 
     if (Object.values(passwordChecks).includes(false)) {
-      setError("La contraseña no cumple todos los requisitos.");
-      return;
+      const msg = "La contraseña no cumple todos los requisitos.";
+      setError(msg);
+      alertError("Contraseña inválida", msg);
+      return false;
     }
 
-    
     if (formData.password !== formData.confirmPassword) {
-      setError("Las contraseñas no coinciden.");
-      return;
+      const msg = "Las contraseñas no coinciden.";
+      setError(msg);
+      alertError("Validación", msg);
+      return false;
     }
-
-
-    // Suscripción y método de pago ya no son obligatorios
 
     if (!/^\+?\d{7,15}$/.test(formData.phone)) {
-      setError("Por favor ingresa un número de teléfono válido.");
-      return;
+      const msg = "Por favor ingresa un número de teléfono válido.";
+      setError(msg);
+      alertError("Teléfono inválido", msg);
+      return false;
     }
 
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
 
     try {
+      showLoading("Creando tu cuenta...");
+
       const res = await registerUser({
         name: formData.name,
         email: formData.email,
@@ -86,16 +134,27 @@ function RegisterformUser() {
         rol: "client",
       });
 
+      // Guarda token si viene
+      const token =
+        (res as any)?.accessToken || (res as any)?.data?.accessToken;
+      if (token) localStorage.setItem("accessToken", token);
 
-
-      localStorage.setItem("accessToken", res.accessToken);
-      alert("Registro de usuario completado ✅");
+      await alertSuccess(
+        "¡Registro completado!",
+        "Tu cuenta de usuario fue creada correctamente."
+      );
+      navigate("/DashboardUser"); // respeta tu flujo actual
     } catch (err: any) {
-      setError(err?.message || "Error registrando usuario");
+      const msg =
+        err?.userMessage ||
+        err?.response?.data?.message ||
+        "No pudimos completar el registro. Inténtalo más tarde.";
+      setError(String(msg));
+      await alertError("Registro", String(msg));
+    } finally {
+      closeLoading();
     }
   };
-
-
 
   return (
     <Paper elevation={8} className="p-8 rounded-2xl shadow-lg max-w-md mx-auto">
@@ -173,13 +232,23 @@ function RegisterformUser() {
             }}
           />
 
-          {/* ✅ Validaciones en tiempo real */}
+          {/* Indicadores de contraseña */}
           <Box className="mt-1 text-sm">
-            <Typography color={passwordChecks.minLength ? "green" : "error"}>• Al menos 6 caracteres</Typography>
-            <Typography color={passwordChecks.uppercase ? "green" : "error"}>• Una letra mayúscula</Typography>
-            <Typography color={passwordChecks.lowercase ? "green" : "error"}>• Una letra minúscula</Typography>
-            <Typography color={passwordChecks.number ? "green" : "error"}>• Un número</Typography>
-            <Typography color={passwordChecks.specialChar ? "green" : "error"}>• Un carácter especial (!@#$%^&*...)</Typography>
+            <Typography color={passwordChecks.minLength ? "green" : "error"}>
+              • Al menos 6 caracteres
+            </Typography>
+            <Typography color={passwordChecks.uppercase ? "green" : "error"}>
+              • Una letra mayúscula
+            </Typography>
+            <Typography color={passwordChecks.lowercase ? "green" : "error"}>
+              • Una letra minúscula
+            </Typography>
+            <Typography color={passwordChecks.number ? "green" : "error"}>
+              • Un número
+            </Typography>
+            <Typography color={passwordChecks.specialChar ? "green" : "error"}>
+              • Un carácter especial (!@#$%^&*...)
+            </Typography>
           </Box>
 
           <TextField
@@ -227,12 +296,11 @@ function RegisterformUser() {
             required
           />
 
-          {/* Campos de plan y método de pago removidos */}
-
           <Button type="submit" variant="contained" color="primary" fullWidth>
             Registrarse
           </Button>
 
+          {/* Auth por terceros (tuyo) */}
           <div className="grid grid-cols-2 gap-2 pt-1">
             <Button
               component="a"
@@ -272,4 +340,3 @@ function RegisterformUser() {
 }
 
 export default RegisterformUser;
-

@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { http } from "../services/http";
 
+// SweetAlert2
+import { showLoading, closeLoading, toast, alertError } from "../ui/alerts";
+
 function AuthCallback() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -12,14 +15,19 @@ function AuthCallback() {
 
   useEffect(() => {
     const handleAuth = async () => {
+      // Loader visual (SweetAlert2) además del estado local
+      showLoading("Procesando autenticación...");
+
       try {
         const params = new URLSearchParams(location.search);
         const token = params.get("token");
-        const role = params.get("role"); // solo informativo
+        const role = params.get("role"); // informativo
 
         if (!token) {
           setStatus("error");
           setMessage("No se recibió token de autenticación");
+          alertError("Error", "No se recibió token de autenticación.");
+          closeLoading();
           setTimeout(() => navigate("/login", { replace: true }), 2000);
           return;
         }
@@ -30,17 +38,25 @@ function AuthCallback() {
         // Verificar que el token funcione
         await http<{ user: any }>("/auth/me");
 
-        // Mostrar mensaje y redirigir
+        // Mensajes + redirección (misma lógica que ya tenías)
         setStatus("success");
         setMessage(`¡Bienvenido! Redirigiendo como ${role || "usuario"}...`);
 
+        closeLoading();
+        toast("Autenticado correctamente", "success");
+
         setTimeout(() => {
-          navigate("/", { replace: true }); // va al home, AuthContext se encargará de hidratar el user
+          navigate("/", { replace: true });
         }, 1500);
       } catch (error) {
         console.error("Error en callback OAuth:", error);
         setStatus("error");
         setMessage("Error al procesar autenticación");
+        closeLoading();
+        alertError(
+          "No se pudo completar la autenticación",
+          "Intenta iniciar sesión nuevamente."
+        );
         setTimeout(() => navigate("/login", { replace: true }), 2000);
       }
     };
