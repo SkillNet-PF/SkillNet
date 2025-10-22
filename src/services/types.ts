@@ -48,13 +48,15 @@ export interface ProviderRegisterRequest {
   address: string;
   phone: string;
   rol: "provider";
-  isActive: boolean; // Campo requerido por el backend
+  // isActive lo maneja el backend; no enviarlo desde el front
 
   // Campos específicos de ProviderRegisterDto
   serviceType?: string;
   about: string; // Campo correcto (no "bio")
   days: string; // CSV e.g. "lunes,martes"
   horarios: string; // CSV e.g. "09:00,14:00"
+  // Backend espera 'category' como nombre; mantenemos categoryId solo para UI
+  category?: string;
   categoryId?: string;
 }
 

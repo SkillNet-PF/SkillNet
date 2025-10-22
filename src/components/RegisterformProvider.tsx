@@ -155,11 +155,13 @@ function RegisterformProvider() {
         address: formData.address,
         phone: formData.phone,
         rol: "provider",
-        isActive: true,
+        // isActive lo setea el backend
         // serviceType omitido: la categoría define el tipo
         about: formData.about,
         days: selectedDays.join(","),
         horarios: horariosCSV,
+        // Backend espera 'category' (nombre), pero nuestra UI maneja ID
+        category: categories.find((c) => c.categoryId === categoryId)?.name || "",
         categoryId,
       });
       localStorage.setItem("accessToken", res.accessToken);

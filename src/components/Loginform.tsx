@@ -62,7 +62,7 @@ function LoginForm() {
         setUser(profile);
         setRole(profile?.rol === "provider" ? "provider" : "user");
 
-        navigate("/"); // 👈 redirige a la página que se le indique
+        navigate("/perfil");
       } else {
         setError("Credenciales inválidas. Intenta nuevamente.");
       }
