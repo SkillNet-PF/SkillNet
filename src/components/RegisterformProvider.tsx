@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Stack,
@@ -12,13 +12,18 @@ import {
   Alert,
   Typography,
   Paper,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
-import { registerProvider } from "../services/providers";
-import { auth0RegisterUrl } from "../services/auth";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
-// 👇 Importa las utilidades de SweetAlert2 centralizadas
+import { registerProvider } from "../services/providers";
+import { getCategories, CategoryDto } from "../services/categories";
+import { auth0RegisterUrl } from "../services/auth";
+
+// SweetAlert2 helpers centralizados (tuyos)
 import {
   showLoading,
   closeLoading,
@@ -37,17 +42,21 @@ function RegisterformProvider() {
     confirmPassword: "",
     address: "",
     phone: "",
-    serviceType: "",
     about: "",
-    days: "",
-    horarios: "",
   });
+
+  // remoto: categorías + días seleccionables + rango horario
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [categoryId, setCategoryId] = useState<string>("");
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [startTime, setStartTime] = useState<string>("09:00");
+  const [endTime, setEndTime] = useState<string>("18:00");
 
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Validación dinámica de contraseña
+  // Validación dinámica de contraseña (tuyo)
   const [passwordChecks, setPasswordChecks] = useState({
     minLength: true,
     uppercase: false,
@@ -55,6 +64,37 @@ function RegisterformProvider() {
     number: false,
     specialChar: false,
   });
+
+  useEffect(() => {
+    getCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
+  }, []);
+
+  const toggleDay = (day: string) => {
+    setSelectedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  // Genera CSV de horarios cada X minutos (acepta “09:00” a “18:00”)
+  const generateTimeSlotsCSV = (from: string, to: string, stepMinutes = 60) => {
+    const toMinutes = (hhmm: string) => {
+      const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
+      return h * 60 + m;
+    };
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fromMin = toMinutes(from);
+    const toMin = toMinutes(to);
+    if (isNaN(fromMin) || isNaN(toMin) || fromMin >= toMin) return "";
+    const slots: string[] = [];
+    for (let t = fromMin; t <= toMin; t += stepMinutes) {
+      const h = Math.floor(t / 60);
+      const m = t % 60;
+      slots.push(`${pad(h)}:${pad(m)}`);
+    }
+    return slots.join(",");
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -76,45 +116,52 @@ function RegisterformProvider() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validaciones de formulario
+  const validateForm = () => {
     if (!formData.name || !formData.email || !formData.password) {
       setError("Por favor completa todos los campos obligatorios.");
-      return;
+      return false;
     }
-
     if (!formData.email.includes("@")) {
       setError("Por favor ingresa un correo electrónico válido.");
-      return;
+      return false;
     }
-
     if (formData.password.length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres.");
-      return;
+      return false;
     }
-
     if (Object.values(passwordChecks).includes(false)) {
       setError("La contraseña no cumple todos los requisitos.");
-      return;
+      return false;
     }
     if (formData.password !== formData.confirmPassword) {
       setError("Las contraseñas no coinciden.");
-      return;
-    }
-    if (!formData.serviceType) {
-      setError("Debes seleccionar un tipo de servicio.");
-      return;
+      return false;
     }
     if (!/^\+?\d{7,15}$/.test(formData.phone)) {
       setError("Por favor ingresa un número de teléfono válido.");
-      return;
+      return false;
     }
-    if (!formData.days || !formData.horarios) {
-      setError("Debes completar los días y horarios de disponibilidad.");
-      return;
+    if (!selectedDays.length) {
+      setError("Selecciona al menos un día disponible.");
+      return false;
     }
+    if (!categoryId) {
+      setError("Debes seleccionar una categoría.");
+      return false;
+    }
+    const horariosCSV = generateTimeSlotsCSV(startTime, endTime, 60);
+    if (!horariosCSV) {
+      setError("Rango horario inválido (hora de inicio debe ser menor a fin).");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    const horariosCSV = generateTimeSlotsCSV(startTime, endTime, 60);
 
     try {
       showLoading("Creando tu cuenta...");
@@ -129,32 +176,32 @@ function RegisterformProvider() {
         phone: formData.phone,
         rol: "provider",
         isActive: true,
-        serviceType: formData.serviceType,
+        // el tipo se deduce por la categoría; no enviamos serviceType
         about: formData.about,
-        days: formData.days,
-        horarios: formData.horarios,
+        days: selectedDays.join(","), // back espera CSV
+        horarios: horariosCSV, // CSV de horarios
+        categoryId, // id de categoría del select
       });
 
-      // Guarda el token si tu API lo envía
-      if ((res as any)?.accessToken) {
-        localStorage.setItem("accessToken", (res as any).accessToken);
-      }
+      // si el back devuelve token, lo guardamos (sin romper flujo actual)
+      const token =
+        (res as any)?.accessToken || (res as any)?.data?.accessToken;
+      if (token) localStorage.setItem("accessToken", token);
 
-      // Alerta de éxito SweetAlert2
       await alertSuccess(
         "¡Registro de proveedor completado!",
         "Tu cuenta fue creada correctamente."
       );
 
-      // ruta del Dashboard
+      // mantenemos tu ruta de éxito
       navigate("/DashboardProvider");
     } catch (err: any) {
       const msg =
         err?.userMessage ||
+        err?.response?.data?.message ||
         "No pudimos completar el registro. Inténtalo más tarde.";
-      setError(msg); // si quieres seguir mostrando el <Alert> de MUI
-      // alertError ya lo mostró http.ts, pero si quieres reforzar:
-      // alertError("Registro", msg);
+      setError(String(msg));
+      await alertError("Registro", String(msg));
     } finally {
       closeLoading();
     }
@@ -236,7 +283,7 @@ function RegisterformProvider() {
             }}
           />
 
-          {/*  Validaciones dinámicas del password */}
+          {/* Reglas en vivo */}
           <Box className="mt-1 text-sm">
             <Typography color={passwordChecks.minLength ? "green" : "error"}>
               • Al menos 6 caracteres
@@ -300,20 +347,22 @@ function RegisterformProvider() {
             required
           />
 
+          {/* Categoría (remoto) */}
           <TextField
             select
-            name="serviceType"
-            label="Tipo de servicio"
-            value={formData.serviceType}
-            onChange={handleChange}
+            name="categoryId"
+            label="Categoría"
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
             fullWidth
             required
           >
-            <MenuItem value="">Selecciona tu servicio</MenuItem>
-            <MenuItem value="plomeria">Plomería</MenuItem>
-            <MenuItem value="electricidad">Electricidad</MenuItem>
-            <MenuItem value="carpinteria">Carpintería</MenuItem>
-            <MenuItem value="otros">Otros</MenuItem>
+            <MenuItem value="">Selecciona una categoría</MenuItem>
+            {categories.map((c) => (
+              <MenuItem key={c.categoryId} value={c.categoryId}>
+                {c.name}
+              </MenuItem>
+            ))}
           </TextField>
 
           <TextField
@@ -328,30 +377,58 @@ function RegisterformProvider() {
             required
           />
 
-          <TextField
-            name="days"
-            label="Días disponibles"
-            placeholder="ej: lunes,martes,miercoles"
-            value={formData.days}
-            onChange={handleChange}
-            fullWidth
-            required
-          />
+          {/* Días disponibles (remoto) */}
+          <Box>
+            <Typography variant="subtitle2" className="mb-1">
+              Días disponibles
+            </Typography>
+            <FormGroup row>
+              {[
+                "lunes",
+                "martes",
+                "miércoles",
+                "jueves",
+                "viernes",
+                "sábado",
+                "domingo",
+              ].map((d) => (
+                <FormControlLabel
+                  key={d}
+                  control={
+                    <Checkbox
+                      checked={selectedDays.includes(d)}
+                      onChange={() => toggleDay(d)}
+                    />
+                  }
+                  label={d}
+                />
+              ))}
+            </FormGroup>
+          </Box>
 
-          <TextField
-            name="horarios"
-            label="Horarios disponibles"
-            placeholder="ej: 09:00,18:00"
-            value={formData.horarios}
-            onChange={handleChange}
-            fullWidth
-            required
-          />
+          {/* Rango horario (remoto) */}
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField
+              type="time"
+              label="Hora inicio"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              type="time"
+              label="Hora fin"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
 
           <Button type="submit" variant="contained" color="success" fullWidth>
             Registrarse como Proveedor
           </Button>
 
+          {/* Auth por terceros (tuyo) */}
           <div className="grid grid-cols-2 gap-2 pt-1">
             <Button
               component="a"

@@ -1,3 +1,5 @@
+// src/services/types.ts
+
 export type BackendRole = "client" | "provider" | "admin";
 
 export interface BackendUser {
@@ -14,50 +16,48 @@ export interface AuthResponse {
   accessToken: string;
 }
 
-// ============== INTERFACES DE REGISTRO ==============
+/* ============== INTERFACES DE REGISTRO ============== */
 
-// Interface para registro de cliente (coincide con RegisterClientDto)
+// Registro de cliente (coincide con lo que manda el form y espera el back)
 export interface ClientRegisterRequest {
-  // Campos heredados de RegisterDto
+  // comunes
   userId?: string;
   imgProfile?: string;
   name: string;
-  birthDate: string;
+  birthDate: string; // "YYYY-MM-DD" (o ISO si tu back lo requiere)
   email: string;
   password: string;
-  confirmPassword: string;
+  confirmPassword?: string; // opcional: el back puede ignorarlo
   address: string;
   phone: string;
   rol: "client";
-
-  // Campos específicos de RegisterClientDto
-  paymentMethod: string; // "tarjeta_credito", "paypal", "transferencia"
-  subscription: string; // "basic", "standard", "premium"
+  // ❌ Eliminado: subscription / paymentMethod (ya no son obligatorios)
 }
 
-// Interface para registro de proveedor (coincide con ProviderRegisterDto)
+// Registro de proveedor
 export interface ProviderRegisterRequest {
-  // Campos heredados de RegisterDto
+  // comunes
   userId?: string;
   imgProfile?: string;
   name: string;
   birthDate: string;
   email: string;
   password: string;
-  confirmPassword: string;
+  confirmPassword?: string; // opcional
   address: string;
   phone: string;
   rol: "provider";
-  isActive: boolean; // Campo requerido por el backend
+  isActive?: boolean; // lo enviamos como true, pero opcional por si el back setea default
 
-  // Campos específicos de ProviderRegisterDto
-  serviceType: string;
-  about: string; // Campo correcto (no "bio")
-  days: string; // CSV e.g. "lunes,martes"
-  horarios: string; // CSV e.g. "09:00,14:00"
+  // específicos
+  about: string; // descripción (antes “bio”)
+  days: string; // CSV: "lunes,martes"
+  horarios: string; // CSV: "09:00,14:00"
+  categoryId?: string; // opcional por compatibilidad (algunos backs usan nombre de categoría)
+  // ❌ Eliminado: serviceType (deriva de la categoría)
 }
 
-// ============== INTERFACES DE ENTIDADES ==============
+/* ============== INTERFACES DE ENTIDADES ============== */
 
 export interface ClientProfile {
   userId: string;
@@ -81,11 +81,12 @@ export interface ProviderProfile {
   address?: string;
   phone?: string;
   isActive: boolean;
-  serviceType?: string;
-  about?: string; // Correcto: "about" no "bio"
-  days?: string[];
-  horarios?: string[];
+  about?: string; // correcto
+  days?: string[]; // normalizado desde CSV
+  horarios?: string[]; // normalizado desde CSV
   rating?: number;
+  serviceType?: string; // opcional (solo si el back aún lo expone)
+  category?: { categoryId: string; name: string; description?: string };
 }
 
 export function toFrontendRole(

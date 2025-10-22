@@ -24,7 +24,7 @@ function NavbarUser() {
           </Typography>
 
           <Stack direction="row" spacing={2} sx={{ marginLeft: 'auto' }} alignItems="center">
-            <Button component={Link} to="/turnos" color="inherit">Mis Turnos</Button>
+            <Button component={Link} to="/mis-turnos" color="inherit">Mis Turnos</Button>
             <Button component={Link} to="/solicitar" color="inherit">Solicitar Turno</Button>
 
             <Tooltip title={mode === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}>

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, ElementType } from "react";
 import { useAuthContext } from "../contexts/AuthContext";
 import { updateProviderProfile, uploadAvatar } from "../services/auth";
+import { getCategories, CategoryDto } from "../services/categories";
 import {
   FaEdit,
   FaEnvelope,
@@ -18,7 +19,6 @@ import {
   FaClock,
   FaStar,
 } from "react-icons/fa";
-// SweetAlert2 helpers (tuyos)
 import {
   showLoading,
   closeLoading,
@@ -71,7 +71,7 @@ interface EditableFieldProps {
   displayValue?: string;
 }
 
-/** ✅ EditableField sin useMemo (evita que desaparezca el input al editar) */
+/** EditableField sin memo: evita que desaparezca el input al editar */
 const EditableField: React.FC<EditableFieldProps> = ({
   icon: Icon,
   title,
@@ -176,6 +176,9 @@ function DashboardProvider() {
   const [tempValues, setTempValues] = useState<{ [key: string]: any }>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [categoryId, setCategoryId] = useState<string>("");
+
   useEffect(() => {
     if (!profile) return;
     setTempValues({
@@ -184,7 +187,7 @@ function DashboardProvider() {
       birthDate: profile?.birthDate?.split("T")[0] || "",
       address: profile?.address || "",
       phone: profile?.phone || "",
-      serviceType: profile?.serviceType || "",
+      // serviceType eliminado de la UI
       about: profile?.about || "",
       days: Array.isArray(profile?.dias)
         ? profile.dias.join(", ")
@@ -193,6 +196,12 @@ function DashboardProvider() {
         ? profile.horarios.join(", ")
         : profile?.horarios || "",
     });
+    getCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
+    setCategoryId(
+      profile?.category?.categoryId || profile?.category?.CategoryID || ""
+    );
   }, [profile]);
 
   // Validaciones
@@ -266,11 +275,46 @@ function DashboardProvider() {
     }
   };
 
-  // Edición handlers
+  // Handlers edición
   const handleInputChange = (field: string, value: string) =>
     setTempValues((prev) => ({ ...prev, [field]: value }));
 
-  const cancelEditing = () => setEditingField(null);
+  const startEditing = (field: string) => {
+    setEditingField(field);
+    // refresca valores por si el perfil cambió
+    setTempValues({
+      name: profile?.name || "",
+      email: profile?.email || "",
+      birthDate: profile?.birthDate?.split("T")[0] || "",
+      address: profile?.address || "",
+      phone: profile?.phone || "",
+      about: profile?.about || "",
+      days: Array.isArray(profile?.dias)
+        ? profile.dias.join(", ")
+        : profile?.days || "",
+      horarios: Array.isArray(profile?.horarios)
+        ? profile.horarios.join(", ")
+        : profile?.horarios || "",
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingField(null);
+    setTempValues({
+      name: profile?.name || "",
+      email: profile?.email || "",
+      birthDate: profile?.birthDate?.split("T")[0] || "",
+      address: profile?.address || "",
+      phone: profile?.phone || "",
+      about: profile?.about || "",
+      days: Array.isArray(profile?.dias)
+        ? profile.dias.join(", ")
+        : profile?.days || "",
+      horarios: Array.isArray(profile?.horarios)
+        ? profile.horarios.join(", ")
+        : profile?.horarios || "",
+    });
+  };
 
   const saveChanges = async (): Promise<void> => {
     if (!editingField || !profile?.userId) return;
@@ -297,13 +341,6 @@ function DashboardProvider() {
       await alertError(
         "Validación",
         "Selecciona una fecha válida (no futura)."
-      );
-      return;
-    }
-    if (editingField === "serviceType" && !isNonEmpty(value)) {
-      await alertError(
-        "Validación",
-        "Selecciona o escribe un tipo de servicio."
       );
       return;
     }
@@ -428,21 +465,110 @@ function DashboardProvider() {
                 <span>Información de Servicio</span>
               </h2>
 
-              <EditableField
-                icon={FaCog}
-                title="Tipo de Servicio"
-                field="serviceType"
-                currentValue={profile?.serviceType}
-                editingField={editingField}
-                tempValues={tempValues}
-                startEditing={setEditingField}
-                handleInputChange={handleInputChange}
-                saveChanges={saveChanges}
-                cancelEditing={cancelEditing}
-                isSaving={isSaving}
-                placeholder="Ej: Plomería, Electricidad, Jardinería"
-              />
+              {/* Categoría (remoto) */}
+              <div className="mb-4">
+                <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-2 mb-2">
+                  <FaCog />
+                  <span>Categoría</span>
+                </h4>
+                {editingField === "category" ? (
+                  <div className="space-y-2">
+                    <select
+                      value={categoryId}
+                      onChange={(e) => setCategoryId(e.target.value)}
+                      className="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Selecciona una categoría</option>
+                      {categories.map((c) => (
+                        <option key={c.categoryId} value={c.categoryId}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={async () => {
+                          if (!categoryId) return;
+                          setIsSaving(true);
+                          try {
+                            showLoading("Guardando categoría...");
+                            await updateProviderProfile(profile.userId, {
+                              categoryId,
+                            });
+                            const raw: any = user;
+                            const catName =
+                              categories.find(
+                                (c) => c.categoryId === categoryId
+                              )?.name || "";
+                            const next = raw?.user
+                              ? {
+                                  ...raw,
+                                  user: {
+                                    ...raw.user,
+                                    category: { categoryId, name: catName },
+                                  },
+                                }
+                              : raw?.data
+                              ? {
+                                  ...raw,
+                                  data: {
+                                    ...raw.data,
+                                    category: { categoryId, name: catName },
+                                  },
+                                }
+                              : {
+                                  ...raw,
+                                  category: { categoryId, name: catName },
+                                };
+                            setUser(next);
+                            setEditingField(null);
+                            await alertSuccess(
+                              "¡Categoría actualizada!",
+                              "Se guardó correctamente."
+                            );
+                          } catch (e: any) {
+                            await alertError(
+                              "Error",
+                              e?.message || "Error actualizando categoría"
+                            );
+                          } finally {
+                            closeLoading();
+                            setIsSaving(false);
+                          }
+                        }}
+                        disabled={isSaving || !categoryId}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                      >
+                        <FaSave />
+                        <span>{isSaving ? "Guardando..." : "Guardar"}</span>
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        disabled={isSaving}
+                        className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center space-x-1 disabled:bg-gray-400"
+                      >
+                        <FaTimes />
+                        <span>Cancelar</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                    <p className="text-gray-700">
+                      {profile?.category?.name || "Sin categoría"}
+                    </p>
+                    <button
+                      onClick={() => setEditingField("category")}
+                      className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
+                      title="Editar categoría"
+                    >
+                      <FaEdit />
+                    </button>
+                  </div>
+                )}
+              </div>
 
+              {/* About / días / horarios con EditableField */}
               <EditableField
                 icon={FaInfoCircle}
                 title="Acerca de mí (Descripción)"
@@ -450,7 +576,7 @@ function DashboardProvider() {
                 currentValue={profile?.about}
                 editingField={editingField}
                 tempValues={tempValues}
-                startEditing={setEditingField}
+                startEditing={startEditing}
                 handleInputChange={handleInputChange}
                 saveChanges={saveChanges}
                 cancelEditing={cancelEditing}
@@ -470,7 +596,7 @@ function DashboardProvider() {
                 }
                 editingField={editingField}
                 tempValues={tempValues}
-                startEditing={setEditingField}
+                startEditing={startEditing}
                 handleInputChange={handleInputChange}
                 saveChanges={saveChanges}
                 cancelEditing={cancelEditing}
@@ -489,12 +615,12 @@ function DashboardProvider() {
                 }
                 editingField={editingField}
                 tempValues={tempValues}
-                startEditing={setEditingField}
+                startEditing={startEditing}
                 handleInputChange={handleInputChange}
                 saveChanges={saveChanges}
                 cancelEditing={cancelEditing}
                 isSaving={isSaving}
-                placeholder="Ej: 09:00 - 18:00"
+                placeholder="Ej: 09:00, 14:00, 18:00"
               />
             </div>
           </div>
@@ -560,7 +686,7 @@ function DashboardProvider() {
               currentValue={profile?.name}
               editingField={editingField}
               tempValues={tempValues}
-              startEditing={setEditingField}
+              startEditing={startEditing}
               handleInputChange={handleInputChange}
               saveChanges={saveChanges}
               cancelEditing={cancelEditing}
@@ -575,7 +701,7 @@ function DashboardProvider() {
               currentValue={profile?.email}
               editingField={editingField}
               tempValues={tempValues}
-              startEditing={setEditingField}
+              startEditing={startEditing}
               handleInputChange={handleInputChange}
               saveChanges={saveChanges}
               cancelEditing={cancelEditing}
@@ -591,7 +717,7 @@ function DashboardProvider() {
               currentValue={profile?.phone}
               editingField={editingField}
               tempValues={tempValues}
-              startEditing={setEditingField}
+              startEditing={startEditing}
               handleInputChange={handleInputChange}
               saveChanges={saveChanges}
               cancelEditing={cancelEditing}
@@ -607,7 +733,7 @@ function DashboardProvider() {
               currentValue={profile?.address}
               editingField={editingField}
               tempValues={tempValues}
-              startEditing={setEditingField}
+              startEditing={startEditing}
               handleInputChange={handleInputChange}
               saveChanges={saveChanges}
               cancelEditing={cancelEditing}
@@ -623,7 +749,7 @@ function DashboardProvider() {
               displayValue={formatDate(profile?.birthDate)}
               editingField={editingField}
               tempValues={tempValues}
-              startEditing={setEditingField}
+              startEditing={startEditing}
               handleInputChange={handleInputChange}
               saveChanges={saveChanges}
               cancelEditing={cancelEditing}
@@ -631,7 +757,7 @@ function DashboardProvider() {
               inputType="date"
             />
 
-            {/* Estado cuenta (solo visualización) */}
+            {/* Estado de la Cuenta (solo visualización) */}
             <div className="p-4 border-b border-gray-100 last:border-b-0">
               <h4 className="text-lg font-medium text-blue-900 flex items-center space-x-3 mb-2">
                 <FaCheckCircle className="text-blue-500" />

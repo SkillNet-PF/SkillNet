@@ -9,16 +9,16 @@ import {
   Button,
   IconButton,
   InputAdornment,
-  MenuItem,
   Alert,
   Typography,
   Paper,
 } from "@mui/material";
-import { registerUser } from "../services/clients";
-import { auth0RegisterUrl } from "../services/auth";
 import { useNavigate } from "react-router-dom";
 
-// SweetAlert2 helpers
+import { registerUser } from "../services/clients";
+import { auth0RegisterUrl } from "../services/auth";
+
+// SweetAlert2 helpers (tuyos)
 import {
   showLoading,
   closeLoading,
@@ -37,14 +37,13 @@ function RegisterformUser() {
     confirmPassword: "",
     address: "",
     phone: "",
-    subscription: "",
-    paymentMethod: "",
   });
 
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Validaciones dinámicas de contraseña
   const [passwordChecks, setPasswordChecks] = useState({
     minLength: false,
     uppercase: false,
@@ -71,15 +70,12 @@ function RegisterformUser() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validaciones previas al registro
+  const validate = () => {
     if (!formData.name || !formData.email || !formData.password) {
       const msg = "Por favor completa todos los campos obligatorios.";
       setError(msg);
       alertError("Validación", msg);
-      return;
+      return false;
     }
 
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
@@ -87,52 +83,44 @@ function RegisterformUser() {
       const msg = "Por favor ingresa un correo electrónico válido.";
       setError(msg);
       alertError("Correo inválido", msg);
-      return;
+      return false;
     }
 
     if (formData.password.length < 6) {
       const msg = "La contraseña debe tener al menos 6 caracteres.";
       setError(msg);
       alertError("Contraseña débil", msg);
-      return;
+      return false;
     }
 
     if (Object.values(passwordChecks).includes(false)) {
       const msg = "La contraseña no cumple todos los requisitos.";
       setError(msg);
       alertError("Contraseña inválida", msg);
-      return;
+      return false;
     }
 
     if (formData.password !== formData.confirmPassword) {
       const msg = "Las contraseñas no coinciden.";
       setError(msg);
       alertError("Validación", msg);
-      return;
-    }
-
-    if (!formData.subscription) {
-      const msg = "Debes seleccionar una membresía.";
-      setError(msg);
-      alertError("Campo faltante", msg);
-      return;
-    }
-
-    if (!formData.paymentMethod) {
-      const msg = "Debes seleccionar un método de pago.";
-      setError(msg);
-      alertError("Campo faltante", msg);
-      return;
+      return false;
     }
 
     if (!/^\+?\d{7,15}$/.test(formData.phone)) {
       const msg = "Por favor ingresa un número de teléfono válido.";
       setError(msg);
       alertError("Teléfono inválido", msg);
-      return;
+      return false;
     }
 
-    // Registro
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
     try {
       showLoading("Creando tu cuenta...");
 
@@ -145,26 +133,25 @@ function RegisterformUser() {
         address: formData.address,
         phone: formData.phone,
         rol: "client",
-        paymentMethod: formData.paymentMethod,
-        subscription: formData.subscription,
       });
 
-      if ((res as any)?.accessToken) {
-        localStorage.setItem("accessToken", (res as any).accessToken);
-      }
+      // Guarda token si viene
+      const token =
+        (res as any)?.accessToken || (res as any)?.data?.accessToken;
+      if (token) localStorage.setItem("accessToken", token);
 
       await alertSuccess(
         "¡Registro completado!",
         "Tu cuenta de usuario fue creada correctamente."
       );
-
-      // Ajusta la ruta según tu flujo (login o dashboard)
-      navigate("/DashboardUser");
+      navigate("/DashboardUser"); // respeta tu flujo
     } catch (err: any) {
       const msg =
         err?.userMessage ||
+        err?.response?.data?.message ||
         "No pudimos completar el registro. Inténtalo más tarde.";
-      setError(msg);
+      setError(String(msg));
+      await alertError("Registro", String(msg));
     } finally {
       closeLoading();
     }
@@ -310,40 +297,11 @@ function RegisterformUser() {
             required
           />
 
-          <TextField
-            select
-            name="subscription"
-            label="Plan"
-            value={formData.subscription}
-            onChange={handleChange}
-            fullWidth
-            required
-          >
-            <MenuItem value="">Selecciona un plan</MenuItem>
-            <MenuItem value="basic">Básico</MenuItem>
-            <MenuItem value="standard">Estándar</MenuItem>
-            <MenuItem value="premium">Premium</MenuItem>
-          </TextField>
-
-          <TextField
-            select
-            name="paymentMethod"
-            label="Método de pago"
-            value={formData.paymentMethod}
-            onChange={handleChange}
-            fullWidth
-            required
-          >
-            <MenuItem value="">Selecciona método de pago</MenuItem>
-            <MenuItem value="tarjeta_credito">Tarjeta de Crédito</MenuItem>
-            <MenuItem value="paypal">PayPal</MenuItem>
-            <MenuItem value="transferencia">Transferencia Bancaria</MenuItem>
-          </TextField>
-
           <Button type="submit" variant="contained" color="primary" fullWidth>
             Registrarse
           </Button>
 
+          {/* Auth por terceros (tuyo) */}
           <div className="grid grid-cols-2 gap-2 pt-1">
             <Button
               component="a"
