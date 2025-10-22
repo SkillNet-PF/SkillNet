@@ -10,6 +10,7 @@ import NavbarHandler from "./components/NavbarHandler";
 import AuthCallback from "./pages/AuthCallback";
 import DashboardAdmin from "./pages/admin/DashboardAdmin";
 import ProfileRouter from "./pages/ProfileRouter";
+import ProviderProfile from "./pages/DashboardProvider";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/register/provider" element={<RegisterProvider />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/admin/dashboard" element={<DashboardAdmin />} />
+          <Route path="/serviceprovider/dashboard" element={<ProviderProfile />} />
           <Route path="/perfil" element={<ProfileRouter />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
