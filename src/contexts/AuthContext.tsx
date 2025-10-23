@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .then((res) => {
           console.log("Usuario cargado:", res.user);
           setUser(res.user);
-          setRole(res.user?.rol === "provider" ? "provider" : "user");
+          setRole(res.user?.rol === "provider" ? "provider" : "client");
           toast("Sesión restaurada", "success");
         })
         .catch((err: any) => {
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((res) => {
         const profile = res.user;
         setUser(profile);
-        setRole(profile?.rol === "provider" ? "provider" : "user");
+        setRole(profile?.rol === "provider" ? "provider" : "client");
         toast("Sesión actualizada", "success");
       })
       .catch((err: any) => {

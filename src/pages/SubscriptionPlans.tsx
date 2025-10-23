@@ -2,7 +2,7 @@ import React from "react";
 import Swal from "sweetalert2";
 import { FaCheckCircle, FaStar, FaCrown, FaBolt } from "react-icons/fa";
 import { JSX } from "@emotion/react/jsx-runtime";
-import { loadStripe } from "@stripe/stripe-js";
+// import { loadStripe } from "@stripe/stripe-js"; // Temporalmente no usado
 import axios from "axios";
 import { useAuthContext } from "../contexts/AuthContext";
 

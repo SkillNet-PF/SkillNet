@@ -86,7 +86,7 @@ function LoginForm() {
         const profile = profileRes.user;
 
         setUser(profile);
-        setRole(profile?.rol === "provider" ? "provider" : "user");
+        setRole(profile?.rol === "provider" ? "provider" : "client");
         closeLoading();
         toast("Sesión iniciada", "success");
         navigate("/perfil");
