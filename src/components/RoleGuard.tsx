@@ -8,7 +8,7 @@ import { useAuthContext } from "../contexts/AuthContext";
  * @param allowedRoles: array de roles permitidos (por ejemplo ["provider"])
  */
 interface RoleGuardProps {
-  allowedRoles: ("visitor" | "user" | "provider" | "admin")[];
+  allowedRoles: ("visitor" | "client" | "provider" | "admin")[];
   children: ReactNode;
 }
 

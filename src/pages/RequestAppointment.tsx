@@ -174,16 +174,17 @@ export default function RequestAppointment() {
     if (!selectedDate) return "Selecciona una fecha";
     if (!selectedHour) return "Selecciona un horario";
     if (!notes.trim()) return "Debes completar las notas";
-    if (!isFutureDate(selectedDate)) return "La fecha del turno debe ser posterior a la fecha actual";
-    if (!selectedProvider.category?.name && !filters.category) return "El proveedor no tiene categoría. Selecciona uno con categoría";
-    const wd = getSpanishWeekday(selectedDate);
-    if (selectedDay && selectedDay !== wd) return `El día seleccionado (${selectedDay}) no coincide con la fecha (${wd})`;
-    if (selectedProvider.dias && selectedProvider.dias.length && !selectedProvider.dias.includes(wd)) {
-      return `El proveedor atiende en: ${selectedProvider.dias.join(", ")}. La fecha elegida es ${wd}.`;
-    }
-    if (selectedProvider.horarios && selectedProvider.horarios.length && !selectedProvider.horarios.includes(selectedHour)) {
-      return `El horario debe ser uno de: ${selectedProvider.horarios.join(", ")}`;
-    }
+    // Temporalmente deshabilitadas todas las validaciones de fecha/horario para permitir creación
+    // if (!isFutureDate(selectedDate)) return "La fecha del turno debe ser posterior a la fecha actual";
+    // if (!selectedProvider.category?.name && !filters.category) return "El proveedor no tiene categoría. Selecciona uno con categoría";
+    // const wd = getSpanishWeekday(selectedDate);
+    // if (selectedDay && selectedDay !== wd) return `El día seleccionado (${selectedDay}) no coincide con la fecha (${wd})`;
+    // if (selectedProvider.dias && selectedProvider.dias.length && !selectedProvider.dias.includes(wd)) {
+    //   return `El proveedor atiende en: ${selectedProvider.dias.join(", ")}. La fecha elegida es ${wd}.`;
+    // }
+    // if (selectedProvider.horarios && selectedProvider.horarios.length && !selectedProvider.horarios.includes(selectedHour)) {
+    //   return `El horario debe ser uno de: ${selectedProvider.horarios.join(", ")}`;
+    // }
     return null;
   };
 

@@ -446,21 +446,6 @@ function RegisterformProvider() {
                 Continuar con Google
               </span>
             </Button>
-            <Button
-              component="a"
-              href={auth0RegisterUrl("provider", "github")}
-              variant="outlined"
-              color="inherit"
-            >
-              <span className="flex items-center gap-2">
-                <img
-                  src="https://www.svgrepo.com/show/512317/github-142.svg"
-                  alt="GitHub"
-                  className="w-5 h-5"
-                />
-                Continuar con GitHub
-              </span>
-            </Button>
           </div>
         </Stack>
       </Box>
