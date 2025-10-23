@@ -210,7 +210,7 @@ export default function RequestAppointment() {
       setSuccess("Turno solicitado. Quedó en estado pendiente.");
       setExpandedProviderId(null);
       setSelectedProvider(null);
-      setSelectedDay("");
+      // setSelectedDay(""); // Temporalmente no usado
       setSelectedDate(null);
       setSelectedHour("");
       setNotes("");
@@ -309,7 +309,7 @@ export default function RequestAppointment() {
                 const isSame = expandedProviderId === p.userId;
                 setExpandedProviderId(isSame ? null : p.userId);
                 setSelectedProvider(isSame ? null : p);
-                setSelectedDay("");
+                // setSelectedDay(""); // Temporalmente no usado
                 setSelectedHour("");
                 setSelectedDate(null);
                 setError("");
@@ -353,9 +353,9 @@ export default function RequestAppointment() {
                           setSelectedDate(newValue);
                           if (newValue) {
                             const names = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-                            setSelectedDay(names[newValue.day()]);
+                            // setSelectedDay(names[newValue.day()]); // Temporalmente no usado
                           } else {
-                            setSelectedDay("");
+                            // setSelectedDay(""); // Temporalmente no usado
                           }
                         }}
                         slotProps={{ textField: { fullWidth: true } }}
