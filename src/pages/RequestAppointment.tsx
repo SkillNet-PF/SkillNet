@@ -25,7 +25,7 @@ export default function RequestAppointment() {
   });
 
   const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
-  const [selectedDay, setSelectedDay] = useState<string>("");
+  // const [selectedDay, setSelectedDay] = useState<string>(""); // Temporalmente no usado
   const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
   const [selectedHour, setSelectedHour] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
@@ -151,23 +151,25 @@ export default function RequestAppointment() {
     return arr;
   }, [providers, filters]);
 
-  const getSpanishWeekday = (date: Dayjs | string) => {
-    if (!date) return "";
-    const d = typeof date === "string" ? new Date(date) : date.toDate();
-    const idx = d.getDay(); // 0=Dom
-    const names = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-    return names[idx];
-  };
+  // Temporalmente no usado
+  // const getSpanishWeekday = (date: Dayjs | string) => {
+  //   if (!date) return "";
+  //   const d = typeof date === "string" ? new Date(date) : date.toDate();
+  //   const idx = d.getDay(); // 0=Dom
+  //   const names = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+  //   return names[idx];
+  // };
 
-  const isFutureDate = (date: Dayjs | string) => {
-    if (!date) return false;
-    const d = typeof date === "string" ? new Date(date) : date.toDate();
-    const today = new Date();
-    // Comparar solo por fecha (ignorar hora)
-    d.setHours(0,0,0,0);
-    today.setHours(0,0,0,0);
-    return d.getTime() > today.getTime();
-  };
+  // Temporalmente no usado
+  // const isFutureDate = (date: Dayjs | string) => {
+  //   if (!date) return false;
+  //   const d = typeof date === "string" ? new Date(date) : date.toDate();
+  //   const today = new Date();
+  //   // Comparar solo por fecha (ignorar hora)
+  //   d.setHours(0,0,0,0);
+  //   today.setHours(0,0,0,0);
+  //   return d.getTime() > today.getTime();
+  // };
 
   const validateSelection = (): string | null => {
     if (!selectedProvider) return "Selecciona un proveedor";
