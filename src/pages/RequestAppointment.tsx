@@ -352,7 +352,7 @@ export default function RequestAppointment() {
                         onChange={(newValue) => {
                           setSelectedDate(newValue);
                           if (newValue) {
-                            const names = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+                            // const names = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"]; // Temporalmente no usado
                             // setSelectedDay(names[newValue.day()]); // Temporalmente no usado
                           } else {
                             // setSelectedDay(""); // Temporalmente no usado
