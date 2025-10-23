@@ -1,7 +1,6 @@
 import { http } from "./http";
 import { AuthResponse, ProviderRegisterRequest } from "./types";
 
-
 export interface ServiceProvider {
   userId: string;
   imgProfile?: string | null;
@@ -13,7 +12,9 @@ export interface ServiceProvider {
   rol: "provider";
   isActive: boolean;
   serviceType?: string;
-  about: string;
+  bio: string;
+  /** retro-compat: otros módulos aún leen 'about' */
+  about?: string;
   dias: string[];
   horarios: string[];
   category?: {
@@ -39,10 +40,14 @@ export interface UpdateProviderData {
   address?: string;
   phone?: string;
   serviceType?: string;
+  /** nuevo campo “bueno” */
   bio?: string;
+  /** compat con código viejo */
+  about?: string;
   dias?: string[];
   horarios?: string[];
   imgProfile?: string;
+  /** si decides actualizar por id desde otros flows */
   categoryId?: string;
 }
 
@@ -54,44 +59,53 @@ export interface ProviderSearchFilters {
   horarios?: string;
 }
 
-// ======================================================
-// 🧠 Adaptador de datos desde el backend
-// ======================================================
+/* ======================================================
+   Adaptador: /serviceprovider/dashboard
+   Estructura del back:
+   { provider, confirmedAppointments, pendingAppointments }
+   con provider.category { CategoryID, Name }
+====================================================== */
 export function mapProviderDashboardResponse(data: any): ServiceProvider {
-  const p = data.provider;
+  const p = data.provider ?? data;
 
-  const mappedProvider: ServiceProvider = {
+  const bioVal = p?.bio ?? p?.about ?? "";
+
+  return {
     userId: p.userId,
-    imgProfile: p.imgProfile,
+    imgProfile: p.imgProfile ?? null,
     name: p.name,
     birthDate: p.birthDate,
     email: p.email,
     address: p.address,
     phone: p.phone,
     rol: p.rol,
-    isActive: p.isActive,
-    serviceType: p.category?.Name || "",
-    about: p.bio || "",
-    dias: p.dias || [],
-    horarios: p.horarios || [],
+    isActive: !!p.isActive,
+    serviceType: p.category?.Name || p.category?.name || "",
+    bio: bioVal,
+    about: bioVal, // 👈 mantiene vivo el resto del front
+    dias: Array.isArray(p.dias) ? p.dias : [],
+    horarios: Array.isArray(p.horarios) ? p.horarios : [],
     category: p.category
       ? {
-          categoryId: p.category.CategoryID,
-          name: p.category.Name,
-          description: "",
+          categoryId:
+            p.category.CategoryID ??
+            p.category.categoryId ??
+            p.category.id ??
+            "",
+          name: p.category.Name ?? p.category.name ?? "",
+          description: p.category.Description ?? p.category.description ?? "",
         }
       : undefined,
     schedule: p.schedule || [],
-    confirmedAppointments: data.confirmedAppointments,
-    pendingAppointments: data.pendingAppointments,
+    confirmedAppointments:
+      data.confirmedAppointments ?? p.confirmedAppointments,
+    pendingAppointments: data.pendingAppointments ?? p.pendingAppointments,
   };
-
-  return mappedProvider;
 }
 
-// ======================================================
-// 🧾 Endpoints
-// ======================================================
+/* ======================================================
+   Endpoints
+====================================================== */
 
 // Registro de proveedor
 export async function registerProvider(
@@ -136,7 +150,7 @@ export async function registerProvider(
   });
 }
 
-// Crear perfil de proveedor (POST /serviceprovider)
+// (Opcional) crear provider
 export async function createProvider(
   data: UpdateProviderData
 ): Promise<ServiceProvider> {
@@ -146,7 +160,7 @@ export async function createProvider(
   });
 }
 
-// Obtener todos los proveedores
+// Lista de proveedores
 export async function getAllProviders(): Promise<ProvidersListResponse> {
   const res = await http<any>("/serviceprovider", { method: "GET" });
 
@@ -160,6 +174,8 @@ export async function getAllProviders(): Promise<ProvidersListResponse> {
         }
       : undefined;
 
+    const bioVal = p?.bio ?? p?.about ?? "";
+
     return {
       userId: p.userId,
       imgProfile: p.imgProfile,
@@ -171,26 +187,24 @@ export async function getAllProviders(): Promise<ProvidersListResponse> {
       rol: "provider",
       isActive: !!p.isActive,
       serviceType: p.serviceType,
-      about: p.bio ?? p.about,
+      bio: bioVal,
+      about: bioVal, // 👈 compat
       dias: Array.isArray(p.dias) ? p.dias : [],
       horarios: Array.isArray(p.horarios) ? p.horarios : [],
       category,
     } as ServiceProvider;
   };
 
-  if (Array.isArray(res)) {
-    return { providers: res.map(normalize) } as ProvidersListResponse;
-  }
+  if (Array.isArray(res)) return { providers: res.map(normalize) };
 
   if (Array.isArray(res?.providers)) {
-    return { ...res, providers: res.providers.map(normalize) } as ProvidersListResponse;
+    return { ...res, providers: res.providers.map(normalize) };
   }
 
-  // Fallback: estructura inesperada
-  return { providers: [] } as ProvidersListResponse;
+  return { providers: [] };
 }
 
-// Obtener proveedor específico por ID
+// Proveedor por id
 export async function getProviderById(
   providerId: string
 ): Promise<ServiceProvider> {
@@ -199,7 +213,7 @@ export async function getProviderById(
   });
 }
 
-// ✅ Nuevo: Obtener dashboard del proveedor (ya mapeado)
+// ✅ Dashboard provider (ya mapeado)
 export async function getDashboardProvider(): Promise<ServiceProvider> {
   const data = await http(`/serviceprovider/dashboard`, { method: "GET" });
   return mapProviderDashboardResponse(data);
@@ -216,7 +230,7 @@ export async function updateProvider(
   });
 }
 
-// Eliminar proveedor (solo admin)
+// Eliminar (admin)
 export async function deleteProvider(
   providerId: string
 ): Promise<{ message: string }> {
@@ -225,12 +239,11 @@ export async function deleteProvider(
   });
 }
 
-// Buscar proveedores con filtros
+// Buscar con filtros
 export async function searchProviders(
   filters: ProviderSearchFilters
 ): Promise<ServiceProvider[]> {
   const params = new URLSearchParams();
-
   if (filters.name) params.append("name", filters.name);
   if (filters.category) params.append("category", filters.category);
   if (filters.serviceType) params.append("serviceType", filters.serviceType);
@@ -239,8 +252,6 @@ export async function searchProviders(
 
   return await http<ServiceProvider[]>(
     `/serviceprovider/search?${params.toString()}`,
-    {
-      method: "GET",
-    }
+    { method: "GET" }
   );
 }

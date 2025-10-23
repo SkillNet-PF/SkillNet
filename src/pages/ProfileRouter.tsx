@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuthContext } from "../contexts/AuthContext";
 import UserProfile from "./DashboardUser";
@@ -6,42 +7,64 @@ import DashboardAdmin from "./admin/DashboardAdmin";
 import { showLoading, closeLoading, alertError } from "../ui/alerts";
 
 export default function ProfileRouter() {
-  const { user, loading } = useAuthContext();
+  const { user, loading, isLoggingOut } = useAuthContext(); // 👈 lee el flag
+  const warnedRef = useRef(false); // evita mostrar la alerta 2 veces
 
-  // Muestra loader visual mientras se valida sesión
+  // Loader visual
+  useEffect(() => {
+    if (loading) showLoading("Cargando perfil...");
+    else closeLoading();
+  }, [loading]);
+
+  // Mientras valida sesión
   if (loading) {
-    showLoading("Cargando perfil...");
     return (
       <div className="container mx-auto p-6 min-h-screen text-center">
         <p className="text-lg font-medium text-gray-600">Cargando perfil...</p>
       </div>
     );
-  } else {
-    closeLoading();
   }
 
-  // Si no hay usuario autenticado
-  if (!user) {
-    alertError("Sesión no iniciada", "Por favor inicia sesión nuevamente.");
+  // 👇 Si venimos de un logout intencional, NO mostrar alerta; redirige directo
+  if (isLoggingOut) {
     return <Navigate to="/login" replace />;
   }
 
-  // Normaliza la obtención del rol (algunos objetos vienen anidados)
+  // Si no hay usuario autenticado (ni el devUser)
+  if (!effectiveUser) {
+    const justLoggedOut = sessionStorage.getItem("justLoggedOut") === "1";
+    if (justLoggedOut) {
+      sessionStorage.removeItem("justLoggedOut");
+      return <Navigate to="/login" replace />;
+    }
+
+    // acceso sin sesión (no fue logout): mostrar alerta una sola vez
+    if (!warnedRef.current) {
+      warnedRef.current = true;
+      alertError("Sesión no iniciada", "Por favor inicia sesión nuevamente.");
+    }
+    return <Navigate to="/login" replace />;
+  }
+
+  // Normaliza rol
   const role =
-    (user as any)?.rol ||
-    (user as any)?.user?.rol ||
-    (user as any)?.data?.rol ||
+    (effectiveUser as any)?.rol ||
+    (effectiveUser as any)?.user?.rol ||
+    (effectiveUser as any)?.data?.rol ||
     null;
 
-  // Renderiza según el rol
+  // Render según rol
   if (role === "provider") return <ProviderProfile />;
   if (role === "client") return <UserProfile />;
   if (role === "admin") return <DashboardAdmin />;
 
   // Fallback con alerta
-  alertError(
-    "Rol desconocido",
-    "Tu tipo de usuario no tiene un dashboard asignado."
-  );
+  if (!warnedRef.current) {
+    warnedRef.current = true;
+    alertError(
+      "Rol desconocido",
+      "Tu tipo de usuario no tiene un dashboard asignado."
+    );
+  }
   return <Navigate to="/" replace />;
 }
