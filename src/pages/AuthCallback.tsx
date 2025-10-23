@@ -1,53 +1,58 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { http } from "../services/http";
-
-// SweetAlert2
+import { useAuthContext } from "../contexts/AuthContext";
 import { showLoading, closeLoading, toast, alertError } from "../ui/alerts";
 
 function AuthCallback() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { setUser, setRole } = useAuthContext();
+  const ranRef = useRef(false);
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading"
   );
   const [message, setMessage] = useState("Procesando autenticación...");
 
   useEffect(() => {
+    if (ranRef.current) return;
+    ranRef.current = true;
+
     const handleAuth = async () => {
-      // Loader visual (SweetAlert2) además del estado local
       showLoading("Procesando autenticación...");
 
       try {
         const params = new URLSearchParams(location.search);
         const token = params.get("token");
-        const role = params.get("role"); // informativo
+        const role = params.get("role");
 
         if (!token) {
           setStatus("error");
           setMessage("No se recibió token de autenticación");
-          alertError("Error", "No se recibió token de autenticación.");
           closeLoading();
-          setTimeout(() => navigate("/login", { replace: true }), 2000);
+          alertError("Error", "No se recibió token de autenticación.");
+          setTimeout(() => navigate("/login", { replace: true }), 1200);
           return;
         }
 
-        // Guardar token
+        // 1) Guardar token
         localStorage.setItem("accessToken", token);
 
-        // Verificar que el token funcione
-        await http<{ user: any }>("/auth/me");
+        // 2) Traer perfil y ACTUALIZAR CONTEXTO antes de navegar
+        const me = await http<{ user: any }>("/auth/me");
+        const profile = me.user;
+        setUser(profile);
+        setRole(profile?.rol === "provider" ? "provider" : "user");
 
-        // Mensajes + redirección (misma lógica que ya tenías)
+        // 3) Limpiar la URL para evitar reintentos al refrescar
+        window.history.replaceState({}, document.title, "/perfil");
+
+        // 4) Feedback único y navegación
         setStatus("success");
         setMessage(`¡Bienvenido! Redirigiendo como ${role || "usuario"}...`);
-
         closeLoading();
         toast("Autenticado correctamente", "success");
-
-        setTimeout(() => {
-          navigate("/", { replace: true });
-        }, 1500);
+        setTimeout(() => navigate("/perfil", { replace: true }), 800);
       } catch (error) {
         console.error("Error en callback OAuth:", error);
         setStatus("error");
@@ -57,12 +62,12 @@ function AuthCallback() {
           "No se pudo completar la autenticación",
           "Intenta iniciar sesión nuevamente."
         );
-        setTimeout(() => navigate("/login", { replace: true }), 2000);
+        setTimeout(() => navigate("/login", { replace: true }), 1200);
       }
     };
 
     handleAuth();
-  }, [location.search, navigate]);
+  }, [location.search, navigate, setRole, setUser]);
 
   return (
     <div
@@ -104,30 +109,15 @@ function AuthCallback() {
             </h2>
           </div>
         )}
-
         {status === "success" && (
-          <div>
-            <h2 style={{ color: "#28a745", margin: "0 0 10px" }}>✅ ¡Éxito!</h2>
-          </div>
+          <h2 style={{ color: "#28a745", margin: 0 }}>✅ ¡Éxito!</h2>
         )}
-
         {status === "error" && (
-          <div>
-            <h2 style={{ color: "#dc3545", margin: "0 0 10px" }}>❌ Error</h2>
-          </div>
+          <h2 style={{ color: "#dc3545", margin: 0 }}>❌ Error</h2>
         )}
-
         <p style={{ color: "#6c757d", margin: 0 }}>{message}</p>
       </div>
-
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
+      <style>{`@keyframes spin {0%{transform:rotate(0)}100%{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

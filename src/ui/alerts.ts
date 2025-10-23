@@ -47,8 +47,15 @@ export const closeLoading = () => {
 };
 
 export const alertError = (title: string, text?: string) => {
-  // Asegura que un loader abierto no tape la alerta
   closeLoaderIfNeeded();
+
+  const justLoggedOut = sessionStorage.getItem("justLoggedOut") === "1";
+
+  if (justLoggedOut && /sesión\s+no\s+iniciada/i.test(title)) {
+    sessionStorage.removeItem("justLoggedOut");
+    return Promise.resolve(); // no mostramos alerta
+  }
+
   return MySwal.fire({ ...baseOptions, icon: "error", title, text });
 };
 
