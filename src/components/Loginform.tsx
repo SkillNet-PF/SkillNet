@@ -86,7 +86,7 @@ function LoginForm() {
         const profile = profileRes.user;
 
         setUser(profile);
-        setRole(profile?.rol === "provider" ? "provider" : "user");
+        setRole(profile?.rol === "provider" ? "provider" : "client");
         closeLoading();
         toast("Sesión iniciada", "success");
         navigate("/perfil");
@@ -200,22 +200,6 @@ function LoginForm() {
                   className="w-5 h-5"
                 />
                 Google
-              </span>
-            </Button>
-
-            <Button
-              component="a"
-              href={auth0RegisterUrl("client", "github")}
-              variant="outlined"
-              color="inherit"
-            >
-              <span className="flex items-center gap-2">
-                <img
-                  src="https://www.svgrepo.com/show/512317/github-142.svg"
-                  alt="GitHub"
-                  className="w-5 h-5"
-                />
-                GitHub
               </span>
             </Button>
           </div>

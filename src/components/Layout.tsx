@@ -14,7 +14,7 @@ function Layout ({ children}: LayoutProps) {
     let navbar;
     if(!role) {
         navbar = <NavbarVisitor />;
-    } else if (role === "user") {
+    } else if (role === "client") {
         navbar = <NavbarUser />;
     } else if (role === "provider") {
         navbar = <NavbarProvider />;
