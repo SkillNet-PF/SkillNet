@@ -1,21 +1,36 @@
-FROM node:20.19-alpine AS builder
+# Multi-stage build para React/Vite
+FROM node:18-alpine AS builder
+
+# Establecer directorio de trabajo
 WORKDIR /app
 
+# Copiar archivos de dependencias
 COPY package*.json ./
-RUN npm ci --no-audit --no-fund
 
+# Instalar TODAS las dependencias (incluyendo devDependencies para el build)
+RUN npm ci
+
+# Copiar código fuente
 COPY . .
 
-ARG VITE_API_URL
-ENV VITE_API_URL=${VITE_API_URL}
-
+# Build de la aplicación
 RUN npm run build
 
-FROM nginx:1.27-alpine AS runner
-RUN apk add --no-cache curl
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Stage de producción con nginx
+FROM nginx:alpine
+
+# Copiar archivos buildados
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-EXPOSE 80
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=5 CMD curl -sS http://127.0.0.1/ >/dev/null || exit 1
+# Copiar configuración de nginx
+COPY nginx.conf /etc/nginx/nginx.conf
 
+# Agregar healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:80/ || exit 1
+
+# Exponer puerto 80
+EXPOSE 80
+
+# Comando de inicio
+CMD ["nginx", "-g", "daemon off;"]
