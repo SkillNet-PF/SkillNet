@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { showLoading, closeLoading, toast } from "../ui/alerts";
 
-type Role = "visitor" | "user" | "provider";
+type Role = "visitor" | "client" | "provider" | "admin";
 
 interface AuthUser {
   userId: string;
@@ -39,11 +39,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function mapBackendRoleToFront(backend: AuthUser["rol"] | undefined): Role {
+  if (backend === "admin") return "admin";
+  if (backend === "provider") return "provider";
+  if (backend === "client") return "client";
+  return "visitor";
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role>("visitor");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isLoggingOut, setIsLoggingOut] = useState(false); // 👈 NUEVO
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const ranRef = useRef(false); // evita doble ejecución en StrictMode
 
   const refreshMe = async () => {
@@ -56,10 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { http } = await import("../services/http");
     const res = await http<{ user: AuthUser }>("/auth/me");
     setUser(res.user);
-    setRole(res.user?.rol === "provider" ? "provider" : "user");
+    setRole(mapBackendRoleToFront(res.user?.rol));
   };
 
-  // Carga inicial
   useEffect(() => {
     if (ranRef.current) return;
     ranRef.current = true;
@@ -73,11 +79,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       showLoading("Cargando perfil...");
       try {
         await refreshMe();
+        toast("Sesión restaurada", "success");
       } catch (err: any) {
-        localStorage.removeItem("accessToken");
+        console.error("Auth init error:", err);
+        // Si el back responde 401, limpiamos token y estado
+        if (err?.status === 401) {
+          localStorage.removeItem("accessToken");
+        }
         setUser(null);
         setRole("visitor");
-        console.error("Auth init error:", err);
       } finally {
         closeLoading();
         setLoading(false);
@@ -118,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser,
         loading,
         refreshMe,
-        isLoggingOut, // 👈 expuesto al resto
+        isLoggingOut,
       }}
     >
       {children}

@@ -1,15 +1,13 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { FaCheckCircle, FaStar, FaCrown, FaBolt } from "react-icons/fa";
 import { JSX } from "@emotion/react/jsx-runtime";
-import { loadStripe } from "@stripe/stripe-js";
+// import { loadStripe } from "@stripe/stripe-js"; // Temporalmente no usado
 import axios from "axios";
 import { useAuthContext } from "../contexts/AuthContext";
 
 
-// 🔹 Inicializamos Stripe con la clave pública desde .env
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY as string);
+// 🔹 Stripe se inicializa cuando sea necesario
 
 // URL del backend
 const API_URL = import.meta.env.VITE_API_URL;
@@ -50,7 +48,6 @@ const PLANS: Record<
 };
 
 export default function SubscriptionsPage() {
-  const navigate = useNavigate();
   const { user } = useAuthContext(); // 🔹 Obtenemos el usuario real
 
   // 🔹 Cuando el usuario selecciona un plan

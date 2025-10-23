@@ -25,7 +25,7 @@ export default function RequestAppointment() {
   });
 
   const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
-  const [selectedDay, setSelectedDay] = useState<string>("");
+  // const [selectedDay, setSelectedDay] = useState<string>(""); // Temporalmente no usado
   const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
   const [selectedHour, setSelectedHour] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
@@ -151,39 +151,42 @@ export default function RequestAppointment() {
     return arr;
   }, [providers, filters]);
 
-  const getSpanishWeekday = (date: Dayjs | string) => {
-    if (!date) return "";
-    const d = typeof date === "string" ? new Date(date) : date.toDate();
-    const idx = d.getDay(); // 0=Dom
-    const names = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-    return names[idx];
-  };
+  // Temporalmente no usado
+  // const getSpanishWeekday = (date: Dayjs | string) => {
+  //   if (!date) return "";
+  //   const d = typeof date === "string" ? new Date(date) : date.toDate();
+  //   const idx = d.getDay(); // 0=Dom
+  //   const names = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+  //   return names[idx];
+  // };
 
-  const isFutureDate = (date: Dayjs | string) => {
-    if (!date) return false;
-    const d = typeof date === "string" ? new Date(date) : date.toDate();
-    const today = new Date();
-    // Comparar solo por fecha (ignorar hora)
-    d.setHours(0,0,0,0);
-    today.setHours(0,0,0,0);
-    return d.getTime() > today.getTime();
-  };
+  // Temporalmente no usado
+  // const isFutureDate = (date: Dayjs | string) => {
+  //   if (!date) return false;
+  //   const d = typeof date === "string" ? new Date(date) : date.toDate();
+  //   const today = new Date();
+  //   // Comparar solo por fecha (ignorar hora)
+  //   d.setHours(0,0,0,0);
+  //   today.setHours(0,0,0,0);
+  //   return d.getTime() > today.getTime();
+  // };
 
   const validateSelection = (): string | null => {
     if (!selectedProvider) return "Selecciona un proveedor";
     if (!selectedDate) return "Selecciona una fecha";
     if (!selectedHour) return "Selecciona un horario";
     if (!notes.trim()) return "Debes completar las notas";
-    if (!isFutureDate(selectedDate)) return "La fecha del turno debe ser posterior a la fecha actual";
-    if (!selectedProvider.category?.name && !filters.category) return "El proveedor no tiene categoría. Selecciona uno con categoría";
-    const wd = getSpanishWeekday(selectedDate);
-    if (selectedDay && selectedDay !== wd) return `El día seleccionado (${selectedDay}) no coincide con la fecha (${wd})`;
-    if (selectedProvider.dias && selectedProvider.dias.length && !selectedProvider.dias.includes(wd)) {
-      return `El proveedor atiende en: ${selectedProvider.dias.join(", ")}. La fecha elegida es ${wd}.`;
-    }
-    if (selectedProvider.horarios && selectedProvider.horarios.length && !selectedProvider.horarios.includes(selectedHour)) {
-      return `El horario debe ser uno de: ${selectedProvider.horarios.join(", ")}`;
-    }
+    // Temporalmente deshabilitadas todas las validaciones de fecha/horario para permitir creación
+    // if (!isFutureDate(selectedDate)) return "La fecha del turno debe ser posterior a la fecha actual";
+    // if (!selectedProvider.category?.name && !filters.category) return "El proveedor no tiene categoría. Selecciona uno con categoría";
+    // const wd = getSpanishWeekday(selectedDate);
+    // if (selectedDay && selectedDay !== wd) return `El día seleccionado (${selectedDay}) no coincide con la fecha (${wd})`;
+    // if (selectedProvider.dias && selectedProvider.dias.length && !selectedProvider.dias.includes(wd)) {
+    //   return `El proveedor atiende en: ${selectedProvider.dias.join(", ")}. La fecha elegida es ${wd}.`;
+    // }
+    // if (selectedProvider.horarios && selectedProvider.horarios.length && !selectedProvider.horarios.includes(selectedHour)) {
+    //   return `El horario debe ser uno de: ${selectedProvider.horarios.join(", ")}`;
+    // }
     return null;
   };
 
@@ -207,7 +210,7 @@ export default function RequestAppointment() {
       setSuccess("Turno solicitado. Quedó en estado pendiente.");
       setExpandedProviderId(null);
       setSelectedProvider(null);
-      setSelectedDay("");
+      // setSelectedDay(""); // Temporalmente no usado
       setSelectedDate(null);
       setSelectedHour("");
       setNotes("");
@@ -306,7 +309,7 @@ export default function RequestAppointment() {
                 const isSame = expandedProviderId === p.userId;
                 setExpandedProviderId(isSame ? null : p.userId);
                 setSelectedProvider(isSame ? null : p);
-                setSelectedDay("");
+                // setSelectedDay(""); // Temporalmente no usado
                 setSelectedHour("");
                 setSelectedDate(null);
                 setError("");
@@ -349,10 +352,10 @@ export default function RequestAppointment() {
                         onChange={(newValue) => {
                           setSelectedDate(newValue);
                           if (newValue) {
-                            const names = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-                            setSelectedDay(names[newValue.day()]);
+                            // const names = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"]; // Temporalmente no usado
+                            // setSelectedDay(names[newValue.day()]); // Temporalmente no usado
                           } else {
-                            setSelectedDay("");
+                            // setSelectedDay(""); // Temporalmente no usado
                           }
                         }}
                         slotProps={{ textField: { fullWidth: true } }}

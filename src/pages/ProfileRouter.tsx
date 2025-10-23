@@ -30,8 +30,8 @@ export default function ProfileRouter() {
     return <Navigate to="/login" replace />;
   }
 
-  // Si no hay usuario autenticado
-  if (!user) {
+  // Si no hay usuario autenticado (ni el devUser)
+  if (!effectiveUser) {
     const justLoggedOut = sessionStorage.getItem("justLoggedOut") === "1";
     if (justLoggedOut) {
       sessionStorage.removeItem("justLoggedOut");
@@ -48,9 +48,9 @@ export default function ProfileRouter() {
 
   // Normaliza rol
   const role =
-    (user as any)?.rol ||
-    (user as any)?.user?.rol ||
-    (user as any)?.data?.rol ||
+    (effectiveUser as any)?.rol ||
+    (effectiveUser as any)?.user?.rol ||
+    (effectiveUser as any)?.data?.rol ||
     null;
 
   // Render según rol
