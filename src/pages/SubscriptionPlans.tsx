@@ -1,11 +1,10 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import {  useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { FaCheckCircle, FaStar, FaCrown, FaBolt } from "react-icons/fa";
 import { JSX } from "@emotion/react/jsx-runtime";
-import { loadStripe } from "@stripe/stripe-js";
-import axios from "axios";
-import { useAuthContext } from "../contexts/AuthContext";
+//import { FaArrowLeft } from "react-icons/fa";
+//import { Button } from "../ui";
 
 
 // 🔹 Inicializamos Stripe con la clave pública desde .env

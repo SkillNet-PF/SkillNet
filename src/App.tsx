@@ -17,6 +17,9 @@ import SubscriptionPlans from "./pages/SubscriptionPlans";
 import CheckoutPage from "./pages/CheckoutPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
+import Unauthorized from "./pages/Unauthorized";
+import RoleGuard from "./components/RoleGuard";
+import PublicOnlyRoute from "./components/PublicOnlyRoutes";
 
 function App() {
   return (
@@ -25,34 +28,75 @@ function App() {
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<RegisterChoice />} />
-          <Route path="/register/user" element={<RegisterUser />} />
-          <Route path="/register/provider" element={<RegisterProvider />} />
+          <Route path="/login" element={ <PublicOnlyRoute> <Login /></PublicOnlyRoute>}/>
+          <Route path="/register" element={ <PublicOnlyRoute> <RegisterChoice /> </PublicOnlyRoute>} />
+          <Route path="/register/user" element={<PublicOnlyRoute><RegisterUser /> </PublicOnlyRoute>} />
+          <Route path="/register/provider" element={<PublicOnlyRoute><RegisterProvider /></PublicOnlyRoute>} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* Admin */}
-          <Route path="/admin/dashboard" element={<DashboardAdmin />} />
 
-          {/* Proveedor (nuevo dashboard directo) */}
+           {/* Admin */}
           <Route
-            path="/serviceprovider/dashboard"
-            element={<ProviderProfile />}
+            path="/admin/dashboard"
+            element={
+              <RoleGuard allowedRoles={["admin"]}>
+                <DashboardAdmin />
+              </RoleGuard>
+            }
           />
 
-          {/* Perfil centralizado: decide dashboard por rol */}
-          <Route path="/perfil" element={<ProfileRouter />} />
+          {/* Proveedor */}
+          <Route
+            path="/serviceprovider/dashboard"
+            element={
+              <RoleGuard allowedRoles={["provider"]}>
+                <ProviderProfile />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="/agenda"
+            element={
+              <RoleGuard allowedRoles={["provider"]}>
+                <ProviderAgenda />
+              </RoleGuard>
+            }
+          />
 
-          {/* Rutas que ya estaban en main */}
-          <Route path="/solicitar" element={<RequestAppointment />} />
-          <Route path="/mis-turnos" element={<MyAppointments />} />
-          <Route path="/agenda" element={<ProviderAgenda />} />
+          {/* Cliente */}
+          <Route
+            path="/mis-turnos"
+            element={
+              <RoleGuard allowedRoles={["user"]}>
+                <MyAppointments />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="/solicitar"
+            element={
+              <RoleGuard allowedRoles={["user"]}>
+                <RequestAppointment />
+              </RoleGuard>
+            }
+          />
+
+          {/* Perfil (puede ser client o provider) */}
+          <Route
+            path="/perfil"
+            element={
+              <RoleGuard allowedRoles={["user", "provider"]}>
+                <ProfileRouter />
+              </RoleGuard>
+            }
+          />
+
+          {/* Público */}
           <Route path="/suscripciones" element={<SubscriptionPlans />} />
           <Route path="/pago/checkout" element={<CheckoutPage />} />
           <Route path="/pago/success" element={<PaymentSuccess />} />
           <Route path="/pago/cancel" element={<PaymentCancel />} />
-
-          {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
