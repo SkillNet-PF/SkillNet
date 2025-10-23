@@ -8,7 +8,7 @@ function Hero() {
   const shadow = alpha("#000", 0.25);
   return (
     // Fondo toma el color del tema para consistencia entre modos
-    <section style={{ backgroundColor: heroBg, boxShadow: `inset 0 -1px 0 ${shadow}` }} className="flex flex-col items-center justify-center text-center py-28 md:py-36 px-6 text-white min-h-screen-70">
+    <section style={{ backgroundColor: heroBg, boxShadow: `inset 0 -1px 0 ${shadow}` }} className="flex flex-col items-center justify-center text-center py-28 md:py-36 px-6 text-white min-h-screen">
       
       {/* Título Principal */}
       <h1 className="text-5xl md:text-6xl font-extrabold mb-5 drop-shadow-xl max-w-4xl">

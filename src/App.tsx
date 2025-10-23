@@ -17,6 +17,7 @@ import SubscriptionPlans from "./pages/SubscriptionPlans";
 import CheckoutPage from "./pages/CheckoutPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
+import SearchResults from "./pages/SearchResults";
 import Unauthorized from "./pages/Unauthorized";
 import RoleGuard from "./components/RoleGuard";
 import PublicOnlyRoute from "./components/PublicOnlyRoutes";
@@ -27,16 +28,44 @@ function App() {
       <NavbarHandler />
       <main>
         <Routes>
+          {/* Público */}
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={ <PublicOnlyRoute> <Login /></PublicOnlyRoute>}/>
-          <Route path="/register" element={ <PublicOnlyRoute> <RegisterChoice /> </PublicOnlyRoute>} />
-          <Route path="/register/user" element={<PublicOnlyRoute><RegisterUser /> </PublicOnlyRoute>} />
-          <Route path="/register/provider" element={<PublicOnlyRoute><RegisterProvider /></PublicOnlyRoute>} />
+          <Route
+            path="/login"
+            element={
+              <PublicOnlyRoute>
+                <Login />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicOnlyRoute>
+                <RegisterChoice />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/register/user"
+            element={
+              <PublicOnlyRoute>
+                <RegisterUser />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/register/provider"
+            element={
+              <PublicOnlyRoute>
+                <RegisterProvider />
+              </PublicOnlyRoute>
+            }
+          />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
-
-           {/* Admin */}
+          {/* Admin */}
           <Route
             path="/admin/dashboard"
             element={
@@ -68,7 +97,7 @@ function App() {
           <Route
             path="/mis-turnos"
             element={
-              <RoleGuard allowedRoles={["user"]}>
+              <RoleGuard allowedRoles={["client"]}>
                 <MyAppointments />
               </RoleGuard>
             }
@@ -76,27 +105,32 @@ function App() {
           <Route
             path="/solicitar"
             element={
-              <RoleGuard allowedRoles={["user"]}>
+              <RoleGuard allowedRoles={["client"]}>
                 <RequestAppointment />
               </RoleGuard>
             }
           />
 
-          {/* Perfil (puede ser client o provider) */}
+          {/* Perfil (client o provider) */}
           <Route
             path="/perfil"
             element={
-              <RoleGuard allowedRoles={["user", "provider"]}>
+              <RoleGuard allowedRoles={["client", "provider"]}>
                 <ProfileRouter />
               </RoleGuard>
             }
           />
 
-          {/* Público */}
+          {/* Público (suscripciones / pago) */}
           <Route path="/suscripciones" element={<SubscriptionPlans />} />
           <Route path="/pago/checkout" element={<CheckoutPage />} />
           <Route path="/pago/success" element={<PaymentSuccess />} />
           <Route path="/pago/cancel" element={<PaymentCancel />} />
+
+          {/* Búsqueda */}
+          <Route path="/search" element={<SearchResults />} />
+
+          {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
