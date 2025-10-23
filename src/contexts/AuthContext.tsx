@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 // SweetAlert2 helpers
 import { showLoading, closeLoading, toast, alertError } from "../ui/alerts";
 
-type Role = "visitor" | "user" | "provider";
+type Role = "visitor" | "client" | "provider" | "admin";
 
 interface AuthUser {
   userId: string;

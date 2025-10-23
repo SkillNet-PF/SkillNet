@@ -1,4 +1,4 @@
-"use cleint";
+"use client";
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuthContext } from "../contexts/AuthContext";
@@ -16,7 +16,7 @@ export default function PublicOnlyRoute({ children }: PublicOnlyRoutesProps) {
     if (user && role !== "visitor") {
 
         if (role === "provider") return <Navigate to="/serviceprovider/dashboard" replace />;
-        if (role === "user") return <Navigate to="/perfil" replace />;
+        if (role === "client") return <Navigate to="/perfil" replace />;
         if (role === "admin") return <Navigate to="/admin/dashboard" replace />;
 
     }
