@@ -3,6 +3,7 @@ import NavbarVisitor from "./NavbarVisitor";
 import NavbarUser from "./NavbarUser";
 import NavbarProvider from "./NavbarProvider";
 
+
 function NavbarHandler() {
 
     const { role } = useAuthContext();

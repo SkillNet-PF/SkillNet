@@ -28,6 +28,7 @@ export async function getBookedHours(
   dateISO: string
 ): Promise<string[]> {
   // date input is yyyy-mm-dd; backend accepts date param as yyyy-mm-dd
+  console.log(dateISO);
   const dateParam = dateISO.includes("T") ? dateISO.split("T")[0] : dateISO;
   return await http<string[]>(`/appointments/booked-hours/${providerId}?date=${encodeURIComponent(dateParam)}`, {
     method: "GET",
