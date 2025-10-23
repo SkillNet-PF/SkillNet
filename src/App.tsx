@@ -17,6 +17,7 @@ import SubscriptionPlans from "./pages/SubscriptionPlans";
 import CheckoutPage from "./pages/CheckoutPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
+import SearchResults from "./pages/SearchResults";
 
 function App() {
   return (
@@ -51,6 +52,9 @@ function App() {
           <Route path="/pago/checkout" element={<CheckoutPage />} />
           <Route path="/pago/success" element={<PaymentSuccess />} />
           <Route path="/pago/cancel" element={<PaymentCancel />} />
+
+          {/* Búsqueda */}
+          <Route path="/search" element={<SearchResults />} />
 
           {/* 404 */}
           <Route path="*" element={<NotFound />} />

@@ -2,7 +2,7 @@ import Hero from "../components/Hero";
 
 function Home() {
   return (
-    <div>
+    <div className="min-h-screen" style={{ backgroundColor: '#1976d2' }}>
       <Hero />
     </div>
   );
