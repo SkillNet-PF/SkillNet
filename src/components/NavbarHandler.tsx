@@ -9,7 +9,7 @@ function NavbarHandler() {
     const { role } = useAuthContext();
 
     switch (role) {
-        case "user":
+        case "client":
 
         return<NavbarUser/>;
 
