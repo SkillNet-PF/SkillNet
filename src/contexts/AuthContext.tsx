@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 // SweetAlert2 helpers
 import { showLoading, closeLoading, toast, alertError } from "../ui/alerts";
 
-type Role = "visitor" | "user" | "provider";
+type Role = "visitor" | "user" | "provider"| "admin";
 
 interface AuthUser {
   userId: string;
@@ -58,7 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .then((res) => {
           console.log("Usuario cargado:", res.user);
           setUser(res.user);
-          setRole(res.user?.rol === "provider" ? "provider" : "user");
+          setRole(res.user?.rol === "provider" ? "provider" 
+            : res.user?.rol === "admin"? "admin"
+            : "user");
           toast("Sesión restaurada", "success");
         })
         .catch((err: any) => {
@@ -95,7 +97,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((res) => {
         const profile = res.user;
         setUser(profile);
-        setRole(profile?.rol === "provider" ? "provider" : "user");
+        setRole(res.user?.rol === "provider" ? "provider" 
+            : res.user?.rol === "admin"? "admin"
+            : "user");
         toast("Sesión actualizada", "success");
       })
       .catch((err: any) => {

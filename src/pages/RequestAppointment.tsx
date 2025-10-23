@@ -5,7 +5,7 @@ import { getCategories, CategoryDto } from "../services/categories";
 import { createAppointment, getBookedHours } from "../services/appointments";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { Dayjs } from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/es";
 
 export default function RequestAppointment() {
@@ -316,20 +316,32 @@ export default function RequestAppointment() {
                     {error && <Alert severity="error" className="mb-2">{error}</Alert>}
                     {success && <Alert severity="success" className="mb-2">{success}</Alert>}
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2} className="mb-2">
-                      <DatePicker
+                      
+                      {
+                        <DatePicker
+                          label="Fecha"
+                          value={selectedDate}
+                          onChange={(newValue) => {
+                            console.log("🧭 Valor emitido por DatePicker:", newValue);
+                            setSelectedDate(newValue);
+                          }}
+                          slotProps={{ textField: { fullWidth: true } }}
+                        />
+                      /* <DatePicker
                         label="Fecha"
                         value={selectedDate}
-                        onChange={(newValue) => {
+                        onChange={(newValue) => {            
                           setSelectedDate(newValue);
-                          if (newValue) {
-                            const names = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-                            setSelectedDay(names[newValue.day()]);
-                          } else {
-                            setSelectedDay("");
-                          }
+                          // if (newValue) {
+                          //   const names = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+                          //   setSelectedDay(names[newValue.day()]);                        
+                          // } else {
+                          //   setSelectedDay("");
+                          // }
                         }}
+                        onError={() => null}
                         slotProps={{ textField: { fullWidth: true } }}
-                      />
+                      /> */}
                       <TextField
                         select
                         label="Horario"
