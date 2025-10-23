@@ -175,12 +175,13 @@ function RegisterformProvider() {
         address: formData.address,
         phone: formData.phone,
         rol: "provider",
-        isActive: true,
-        // el tipo se deduce por la categoría; no enviamos serviceType
+        // isActive lo setea el backend
+        // serviceType omitido: la categoría define el tipo
         about: formData.about,
-        days: selectedDays.join(","), // back espera CSV
-        horarios: horariosCSV, // CSV de horarios
-        categoryId, // id de categoría del select
+        days: selectedDays.join(","),
+        horarios: horariosCSV,
+        // Backend espera 'category' (nombre), pero nuestra UI maneja ID
+        category: categories.find((c) => c.categoryId === categoryId)?.name || "",
       });
 
       // si el back devuelve token, lo guardamos (sin romper flujo actual)

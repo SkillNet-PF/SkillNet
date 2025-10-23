@@ -87,11 +87,9 @@ function LoginForm() {
 
         setUser(profile);
         setRole(profile?.rol === "provider" ? "provider" : "user");
-
         closeLoading();
         toast("Sesión iniciada", "success");
-        navigate("/"); // ajusta si tienes un dashboard específico
-      } else {
+        navigate("/perfil");
         const msg = "Credenciales inválidas. Intenta nuevamente.";
         setError(msg);
         alertError("No pudimos iniciar sesión", msg);
