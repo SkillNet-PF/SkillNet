@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FaCamera,
   FaClipboardList,
@@ -25,13 +25,38 @@ import {
   alertError,
 } from "../ui/alerts";
 
+// ================== helpers ==================
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
+/** Normaliza URL de avatar:
+ * - Si es relativa, la prefixea con el backend
+ * - Si la URL ya trae query, usa &v=; si no, usa ?v=
+ * - Si no hay imagen, usa placeholder
+ */
+function buildAvatarUrl(raw?: string | null, bust?: number) {
+  const placeholder = "https://via.placeholder.com/150/0a58ca/FFFFFF?text=U";
+  if (!raw) return placeholder;
+
+  let url = /^https?:\/\//i.test(raw)
+    ? raw
+    : `${API_BASE.replace(/\/$/, "")}/${String(raw).replace(/^\//, "")}`;
+
+  if (bust) {
+    const sep = url.includes("?") ? "&" : "?";
+    url = `${url}${sep}v=${bust}`;
+  }
+  return url;
+}
+
 function DashboardUser() {
   const { user, setUser, role } = useAuthContext();
+  const navigate = useNavigate();
+
   const profile: any =
     (user as any)?.user || (user as any)?.data || user || null;
 
   // ---- estado de UI ----
-  const [active, setActive] = useState<number>(0); // pestañas: 0 Resumen, 1 Datos, 2 Historial
+  const [active, setActive] = useState<number>(0); // 0 Resumen, 1 Datos, 2 Historial
   const tabs = ["Resumen", "Datos", "Historial"];
 
   // avatar
@@ -68,12 +93,41 @@ function DashboardUser() {
       day: "numeric",
     });
 
+  // ======== LÓGICA DE SUSCRIPCIÓN ========
   const now = new Date();
   const endDate = profile?.endDate ? new Date(profile.endDate) : null;
-  const isSubscriptionActive =
-    !!profile?.paymentStatus && !!endDate && endDate > now;
-  const planName =
-    profile?.suscription?.Name || profile?.subscription?.name || "Sin plan";
+  const subscription = profile?.subscription || profile?.suscription || null;
+
+  // Consideramos "plan pagado" sólo si:
+  // - paymentStatus true
+  // - existe nombre de plan
+  // - existen fechas válidas
+  const hasPaidPlan =
+    Boolean(profile?.paymentStatus) &&
+    Boolean(subscription?.name || subscription?.Name) &&
+    Boolean(profile?.startDate) &&
+    Boolean(profile?.endDate);
+
+  const isSubscriptionActive = !!hasPaidPlan && !!endDate && endDate > now;
+
+  const planName = hasPaidPlan
+    ? subscription?.name || subscription?.Name
+    : "Sin plan";
+
+  const servicesLeft = isSubscriptionActive
+    ? Number(profile?.servicesLeft ?? 0)
+    : 0;
+
+  // Si no hay plan activo, intercepta el intento de crear cita
+  const handleRequestClick = (e: React.MouseEvent) => {
+    if (!isSubscriptionActive) {
+      e.preventDefault();
+      alertError(
+        "Suscripción requerida",
+        "Elige un plan y completa el pago para poder solicitar turnos."
+      ).then(() => navigate("/suscripciones"));
+    }
+  };
 
   const handleCameraClick = () => fileInputRef.current?.click();
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,7 +149,7 @@ function DashboardUser() {
           ? { ...raw, data: { ...raw.data, imgProfile: result.imgProfile } }
           : { ...raw, imgProfile: result.imgProfile };
         setUser(next);
-        setImgBust(Date.now());
+        setImgBust(Date.now()); // cache-buster
       }
       await alertSuccess("¡Imagen actualizada!", "Se guardó correctamente.");
     } catch (err: any) {
@@ -162,11 +216,10 @@ function DashboardUser() {
             <div className="flex items-center gap-4">
               <div className="relative w-20 h-20">
                 <img
-                  src={
-                    ((profile?.imgProfile || profile?.picture) ??
-                      "https://via.placeholder.com/150/0a58ca/FFFFFF?text=U") +
-                    (imgBust ? `?v=${imgBust}` : "")
-                  }
+                  src={buildAvatarUrl(
+                    profile?.imgProfile || profile?.picture,
+                    imgBust
+                  )}
                   className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
                 />
                 <button
@@ -198,7 +251,8 @@ function DashboardUser() {
             {/* Acciones rápidas */}
             <div className="flex gap-2">
               <Link
-                to="/solicitar"
+                to={isSubscriptionActive ? "/solicitar" : "#"}
+                onClick={handleRequestClick}
                 className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg backdrop-blur border border-white/20"
               >
                 Solicitar turno
@@ -216,9 +270,7 @@ function DashboardUser() {
           <div className="grid grid-cols-3 gap-3 mt-6">
             <div className="bg-white/10 rounded-xl p-4 text-center">
               <div className="text-sm opacity-90">Servicios restantes</div>
-              <div className="text-2xl font-bold">
-                {profile?.servicesLeft ?? 0}
-              </div>
+              <div className="text-2xl font-bold">{servicesLeft}</div>
             </div>
             <div className="bg-white/10 rounded-xl p-4 text-center">
               <div className="text-sm opacity-90">Plan</div>
@@ -234,50 +286,64 @@ function DashboardUser() {
         </div>
       </div>
 
-      {/* CONTENIDO con Sidebar sticky + Tabs */}
+      {/* CONTENIDO */}
       <div className="container mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Sidebar (sticky) */}
+        {/* Sidebar */}
         <aside className="lg:col-span-4 space-y-4 lg:sticky lg:top-6 h-max">
-          {/* Suscripción compacta */}
+          {/* Suscripción */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow p-5">
             <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
               <FaCalendarAlt /> Mi suscripción
             </h3>
-            <div className="text-sm space-y-1">
-              <div>
-                <span className="font-medium">Plan:</span> {planName}
-              </div>
-              <div>
-                <span className="font-medium">Inicio:</span>{" "}
-                {profile?.startDate ? formatDate(profile.startDate) : "—"}
-              </div>
-              <div>
-                <span className="font-medium">Vence:</span>{" "}
-                {profile?.endDate ? formatDate(profile.endDate) : "—"}
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    isSubscriptionActive ? "bg-green-500" : "bg-red-500"
-                  }`}
-                />
-                {isSubscriptionActive ? "Al día" : "Pendiente"}
-              </div>
-            </div>
-            <div className="flex gap-2 mt-4">
-              <Link
-                to="/suscripciones"
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center px-3 py-2 rounded-lg"
-              >
-                Cambiar plan
-              </Link>
-              <Link
-                to="/pago/checkout"
-                className="flex-1 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-center px-3 py-2 rounded-lg"
-              >
-                Pasarela
-              </Link>
-            </div>
+
+            {!hasPaidPlan ? (
+              <>
+                <p className="text-sm opacity-80">
+                  Aún no tienes una suscripción activa. Elige un plan para poder
+                  solicitar turnos.
+                </p>
+                <div className="flex gap-2 mt-4">
+                  <Link
+                    to="/suscripciones"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center px-3 py-2 rounded-lg"
+                  >
+                    Elegir plan
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-sm space-y-1">
+                  <div>
+                    <span className="font-medium">Plan:</span> {planName}
+                  </div>
+                  <div>
+                    <span className="font-medium">Inicio:</span>{" "}
+                    {profile?.startDate ? formatDate(profile.startDate) : "—"}
+                  </div>
+                  <div>
+                    <span className="font-medium">Vence:</span>{" "}
+                    {profile?.endDate ? formatDate(profile.endDate) : "—"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full ${
+                        isSubscriptionActive ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    />
+                    {isSubscriptionActive ? "Al día" : "Pendiente"}
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <Link
+                    to="/suscripciones"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center px-3 py-2 rounded-lg"
+                  >
+                    Cambiar plan
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Estado de cuenta */}
@@ -316,25 +382,30 @@ function DashboardUser() {
               ))}
             </div>
 
-            {/* Panels */}
             <div className="p-5">
               {active === 0 && (
                 <div className="grid md:grid-cols-2 gap-4">
                   <Card title="Servicios disponibles" icon={<FaCreditCard />}>
                     <div className="text-3xl font-extrabold text-blue-700 dark:text-blue-300">
-                      {profile?.servicesLeft ?? 0}
+                      {servicesLeft}
                     </div>
                     <p className="text-sm opacity-70">
-                      Se renuevan con tu plan.
+                      {isSubscriptionActive
+                        ? "Se renuevan con tu plan."
+                        : "Elige un plan para habilitar tus servicios."}
                     </p>
                   </Card>
 
                   <Card title="Próximo vencimiento" icon={<FaCalendarAlt />}>
                     <div className="text-lg font-semibold">
-                      {profile?.endDate ? formatDate(profile.endDate) : "—"}
+                      {isSubscriptionActive && profile?.endDate
+                        ? formatDate(profile.endDate)
+                        : "—"}
                     </div>
                     <p className="text-sm opacity-70">
-                      Mantén tu plan activo para pedir turnos.
+                      {isSubscriptionActive
+                        ? "Mantén tu plan activo para pedir turnos."
+                        : "Aún no tienes un plan activo."}
                     </p>
                   </Card>
                 </div>

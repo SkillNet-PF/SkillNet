@@ -48,8 +48,22 @@ export async function http<T>(path: string, options?: RequestInit): Promise<T> {
           apiMessage = "";
         }
       }
+
       const userMessage = mapStatusToMessage(res.status, apiMessage);
-      alertError("No se pudo completar la acción", userMessage);
+
+      // ⛔️ SUPRIMIR la alerta si venimos de un logout intencional (flag puesto por logout())
+      const suppressByLogout =
+        res.status === 401 && sessionStorage.getItem("justLoggedOut") === "1";
+
+      // ⛔️ (opcional) permitir suprimir manualmente con header
+      const suppressHeader =
+        (headers as any)["X-Suppress-Error-Alert"] === "1" ||
+        (options as any)?.["X-Suppress-Error-Alert"] === "1";
+
+      if (!suppressByLogout && !suppressHeader) {
+        alertError("No se pudo completar la acción", userMessage);
+      }
+      // **NO** limpiamos justLoggedOut aquí; lo limpia Login.tsx al montar.
 
       const error: any = new Error(userMessage);
       error.status = res.status;

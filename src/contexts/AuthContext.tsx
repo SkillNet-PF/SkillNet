@@ -1,9 +1,7 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-
-// SweetAlert2 helpers
-import { showLoading, closeLoading, toast, alertError } from "../ui/alerts";
+import { showLoading, closeLoading, toast } from "../ui/alerts";
 
 type Role = "visitor" | "user" | "provider";
 
@@ -34,6 +32,9 @@ interface AuthContextType {
   user: AuthUser | null;
   setUser: (u: AuthUser | null) => void;
   loading: boolean;
+  refreshMe: () => Promise<void>;
+  /** Flag in-memory para saber si estamos saliendo */
+  isLoggingOut: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,91 +43,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role>("visitor");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false); // 👈 NUEVO
+  const ranRef = useRef(false); // evita doble ejecución en StrictMode
 
-  // Primer efecto: carga inicial
-  useEffect(() => {
+  const refreshMe = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      setLoading(false);
+      setUser(null);
+      setRole("visitor");
       return;
     }
+    const { http } = await import("../services/http");
+    const res = await http<{ user: AuthUser }>("/auth/me");
+    setUser(res.user);
+    setRole(res.user?.rol === "provider" ? "provider" : "user");
+  };
 
-    showLoading("Cargando perfil...");
-
-    import("../services/http").then(({ http }) => {
-      http<{ user: AuthUser }>("/auth/me")
-        .then((res) => {
-          console.log("Usuario cargado:", res.user);
-          setUser(res.user);
-          setRole(res.user?.rol === "provider" ? "provider" : "user");
-          toast("Sesión restaurada", "success");
-        })
-        .catch((err: any) => {
-          console.error("Error obteniendo datos del usuario:", err);
-          if (err.status === 401) {
-            localStorage.removeItem("accessToken");
-            setRole("visitor");
-            setUser(null);
-          } else {
-            const msg =
-              err?.response?.data?.message ||
-              err?.message ||
-              "No se pudo cargar tu perfil.";
-            alertError("Error de autenticación", String(msg));
-          }
-        })
-        .finally(() => {
-          closeLoading();
-          setLoading(false);
-        });
-    });
-  }, []);
-
-  // Segundo efecto: detecta nuevos tokens después del login
+  // Carga inicial
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (!token || user) return;
+    if (ranRef.current) return;
+    ranRef.current = true;
 
-    setLoading(true);
-    showLoading("Actualizando sesión...");
-
-    import("../services/http")
-      .then(({ http }) => http<{ user: AuthUser }>("/auth/me"))
-      .then((res) => {
-        const profile = res.user;
-        setUser(profile);
-        setRole(profile?.rol === "provider" ? "provider" : "user");
-        toast("Sesión actualizada", "success");
-      })
-      .catch((err: any) => {
-        console.error("Error refrescando datos del usuario:", err);
-        if (err.status === 401) {
-          localStorage.removeItem("accessToken");
-          setUser(null);
-          setRole("visitor");
-        } else {
-          const msg =
-            err?.response?.data?.message ||
-            err?.message ||
-            "No se pudo actualizar tu sesión.";
-          alertError("Error de autenticación", String(msg));
-        }
-      })
-      .finally(() => {
+    const init = async () => {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      showLoading("Cargando perfil...");
+      try {
+        await refreshMe();
+      } catch (err: any) {
+        localStorage.removeItem("accessToken");
+        setUser(null);
+        setRole("visitor");
+        console.error("Auth init error:", err);
+      } finally {
         closeLoading();
         setLoading(false);
-      });
-  }, [localStorage.getItem("accessToken")]);
+      }
+    };
+    init();
+  }, []);
 
-  // Logout con feedback
   const logout = () => {
+    // Marca salida intencional (memoria + sessionStorage)
+    setIsLoggingOut(true);
+    sessionStorage.setItem("justLoggedOut", "1");
+
     setRole("visitor");
     setUser(null);
     localStorage.removeItem("accessToken");
     toast("Sesión cerrada correctamente", "info");
+
+    // baja el flag después de un rato por seguridad
+    setTimeout(() => setIsLoggingOut(false), 4000);
   };
 
-  // Pantalla de carga global
   if (loading) {
     return (
       <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -137,7 +110,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ role, setRole, logout, user, setUser, loading }}
+      value={{
+        role,
+        setRole,
+        logout,
+        user,
+        setUser,
+        loading,
+        refreshMe,
+        isLoggingOut, // 👈 expuesto al resto
+      }}
     >
       {children}
     </AuthContext.Provider>

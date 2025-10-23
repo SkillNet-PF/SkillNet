@@ -21,9 +21,9 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 import { registerProvider } from "../services/providers";
 import { getCategories, CategoryDto } from "../services/categories";
-import { auth0RegisterUrl } from "../services/auth";
+import { auth0RegisterUrl, login } from "../services/auth";
+import { useAuthContext } from "../contexts/AuthContext";
 
-// SweetAlert2 helpers centralizados (tuyos)
 import {
   showLoading,
   closeLoading,
@@ -31,7 +31,34 @@ import {
   alertError,
 } from "../ui/alerts";
 
+// --- util
+const DAYS = [
+  "lunes",
+  "martes",
+  "miércoles",
+  "jueves",
+  "viernes",
+  "sábado",
+  "domingo",
+];
+const toSlotsCSV = (start: string, end: string, step = 60) => {
+  const toMin = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const a = toMin(start);
+  const b = toMin(end);
+  if (isNaN(a) || isNaN(b) || a >= b) return "";
+  const out: string[] = [];
+  for (let t = a; t <= b; t += step) {
+    out.push(`${pad(Math.floor(t / 60))}:${pad(t % 60)}`);
+  }
+  return out.join(",");
+};
+
 function RegisterformProvider() {
+  const { refreshMe } = useAuthContext();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -45,18 +72,16 @@ function RegisterformProvider() {
     about: "",
   });
 
-  // remoto: categorías + días seleccionables + rango horario
   const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [categoryId, setCategoryId] = useState<string>("");
+  const [categoryId, setCategoryId] = useState("");
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [startTime, setStartTime] = useState<string>("09:00");
-  const [endTime, setEndTime] = useState<string>("18:00");
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("18:00");
 
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Validación dinámica de contraseña (tuyo)
   const [passwordChecks, setPasswordChecks] = useState({
     minLength: true,
     uppercase: false,
@@ -71,40 +96,19 @@ function RegisterformProvider() {
       .catch(() => setCategories([]));
   }, []);
 
-  const toggleDay = (day: string) => {
+  const toggleDay = (d: string) =>
     setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
     );
-  };
-
-  // Genera CSV de horarios cada X minutos (acepta “09:00” a “18:00”)
-  const generateTimeSlotsCSV = (from: string, to: string, stepMinutes = 60) => {
-    const toMinutes = (hhmm: string) => {
-      const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
-      return h * 60 + m;
-    };
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const fromMin = toMinutes(from);
-    const toMin = toMinutes(to);
-    if (isNaN(fromMin) || isNaN(toMin) || fromMin >= toMin) return "";
-    const slots: string[] = [];
-    for (let t = fromMin; t <= toMin; t += stepMinutes) {
-      const h = Math.floor(t / 60);
-      const m = t % 60;
-      slots.push(`${pad(h)}:${pad(m)}`);
-    }
-    return slots.join(",");
-  };
 
   const handleChange = (
     e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((p) => ({ ...p, [name]: value }));
     setError("");
-
     if (name === "password") {
       setPasswordChecks({
         minLength: value.length >= 6,
@@ -116,17 +120,13 @@ function RegisterformProvider() {
     }
   };
 
-  const validateForm = () => {
+  const validate = () => {
     if (!formData.name || !formData.email || !formData.password) {
       setError("Por favor completa todos los campos obligatorios.");
       return false;
     }
-    if (!formData.email.includes("@")) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(formData.email)) {
       setError("Por favor ingresa un correo electrónico válido.");
-      return false;
-    }
-    if (formData.password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
       return false;
     }
     if (Object.values(passwordChecks).includes(false)) {
@@ -141,16 +141,16 @@ function RegisterformProvider() {
       setError("Por favor ingresa un número de teléfono válido.");
       return false;
     }
-    if (!selectedDays.length) {
-      setError("Selecciona al menos un día disponible.");
-      return false;
-    }
     if (!categoryId) {
       setError("Debes seleccionar una categoría.");
       return false;
     }
-    const horariosCSV = generateTimeSlotsCSV(startTime, endTime, 60);
-    if (!horariosCSV) {
+    if (!selectedDays.length) {
+      setError("Selecciona al menos un día disponible.");
+      return false;
+    }
+    const csv = toSlotsCSV(startTime, endTime, 60);
+    if (!csv) {
       setError("Rango horario inválido (hora de inicio debe ser menor a fin).");
       return false;
     }
@@ -159,14 +159,17 @@ function RegisterformProvider() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validate()) return;
 
-    const horariosCSV = generateTimeSlotsCSV(startTime, endTime, 60);
+    const horariosCSV = toSlotsCSV(startTime, endTime, 60);
+    const catName =
+      categories.find((c) => c.categoryId === categoryId)?.name || "";
 
     try {
       showLoading("Creando tu cuenta...");
 
-      const res = await registerProvider({
+      // 👇 el back (AuthService.registerProvider) espera 'category' por NOMBRE
+      const payload = {
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -175,26 +178,37 @@ function RegisterformProvider() {
         address: formData.address,
         phone: formData.phone,
         rol: "provider",
-        isActive: true,
-        // el tipo se deduce por la categoría; no enviamos serviceType
         about: formData.about,
-        days: selectedDays.join(","), // back espera CSV
-        horarios: horariosCSV, // CSV de horarios
-        categoryId, // id de categoría del select
-      });
+        days: selectedDays.join(","), // CSV
+        horarios: horariosCSV, // CSV
+        category: catName, // ← requerido por el back
+      } as const satisfies import("../services/types").ProviderRegisterRequest & {
+        category: string;
+      };
 
-      // si el back devuelve token, lo guardamos (sin romper flujo actual)
-      const token =
-        (res as any)?.accessToken || (res as any)?.data?.accessToken;
-      if (token) localStorage.setItem("accessToken", token);
+      const res = await registerProvider(payload as any);
+
+      // si el register no devuelve token, hacemos login
+      let token =
+        (res as any)?.accessToken || (res as any)?.data?.accessToken || "";
+      if (!token) {
+        const loginRes = await login(formData.email, formData.password);
+        token =
+          (loginRes as any)?.accessToken ||
+          (loginRes as any)?.data?.accessToken ||
+          "";
+      }
+
+      if (token) {
+        localStorage.setItem("accessToken", token);
+        await refreshMe();
+      }
 
       await alertSuccess(
         "¡Registro de proveedor completado!",
         "Tu cuenta fue creada correctamente."
       );
-
-      // mantenemos tu ruta de éxito
-      navigate("/DashboardProvider");
+      navigate("/perfil", { replace: true });
     } catch (err: any) {
       const msg =
         err?.userMessage ||
@@ -268,8 +282,7 @@ function RegisterformProvider() {
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => setShowPassword((s) => !s)}
                     edge="end"
                   >
                     {showPassword ? (
@@ -283,7 +296,7 @@ function RegisterformProvider() {
             }}
           />
 
-          {/* Reglas en vivo */}
+          {/* Reglas */}
           <Box className="mt-1 text-sm">
             <Typography color={passwordChecks.minLength ? "green" : "error"}>
               • Al menos 6 caracteres
@@ -314,8 +327,7 @@ function RegisterformProvider() {
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    onClick={() => setShowConfirmPassword((s) => !s)}
                     edge="end"
                   >
                     {showConfirmPassword ? (
@@ -337,7 +349,6 @@ function RegisterformProvider() {
             fullWidth
             required
           />
-
           <TextField
             name="phone"
             label="Teléfono"
@@ -347,10 +358,9 @@ function RegisterformProvider() {
             required
           />
 
-          {/* Categoría (remoto) */}
+          {/* Categoría (de la tabla) */}
           <TextField
             select
-            name="categoryId"
             label="Categoría"
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
@@ -377,21 +387,13 @@ function RegisterformProvider() {
             required
           />
 
-          {/* Días disponibles (remoto) */}
+          {/* Días */}
           <Box>
             <Typography variant="subtitle2" className="mb-1">
               Días disponibles
             </Typography>
             <FormGroup row>
-              {[
-                "lunes",
-                "martes",
-                "miércoles",
-                "jueves",
-                "viernes",
-                "sábado",
-                "domingo",
-              ].map((d) => (
+              {DAYS.map((d) => (
                 <FormControlLabel
                   key={d}
                   control={
@@ -406,7 +408,7 @@ function RegisterformProvider() {
             </FormGroup>
           </Box>
 
-          {/* Rango horario (remoto) */}
+          {/* Rango horario */}
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
             <TextField
               type="time"
@@ -428,8 +430,7 @@ function RegisterformProvider() {
             Registrarse como Proveedor
           </Button>
 
-          {/* Auth por terceros (tuyo) */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="grid grid-cols-1 gap-2 pt-1">
             <Button
               component="a"
               href={auth0RegisterUrl("provider", "google-oauth2")}
@@ -443,21 +444,6 @@ function RegisterformProvider() {
                   className="w-5 h-5"
                 />
                 Continuar con Google
-              </span>
-            </Button>
-            <Button
-              component="a"
-              href={auth0RegisterUrl("provider", "github")}
-              variant="outlined"
-              color="inherit"
-            >
-              <span className="flex items-center gap-2">
-                <img
-                  src="https://www.svgrepo.com/show/512317/github-142.svg"
-                  alt="GitHub"
-                  className="w-5 h-5"
-                />
-                Continuar con GitHub
               </span>
             </Button>
           </div>

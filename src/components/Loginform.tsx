@@ -12,26 +12,21 @@ import {
   Stack,
   Paper,
 } from "@mui/material";
-import { login, auth0RegisterUrl, me } from "../services/auth";
+import { login, auth0RegisterUrl } from "../services/auth";
 import { useAuthContext } from "../contexts/AuthContext";
 
-// 👇 SweetAlert2 helpers
-import {
-  showLoading,
-  closeLoading,
-  alertError,
-  alertSuccess,
-  toast,
-} from "../ui/alerts";
+// SweetAlert2 helpers
+import { showLoading, closeLoading, alertError, toast } from "../ui/alerts";
 
 function LoginForm() {
-  const { setUser, setRole } = useAuthContext();
+  const { refreshMe } = useAuthContext(); // 👈 usar refreshMe para /auth/me
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  // Indicadores (solo UI, no bloquean el submit)
   const [passwordChecks, setPasswordChecks] = useState({
     minLength: false,
     uppercase: false,
@@ -40,7 +35,6 @@ function LoginForm() {
     specialChar: false,
   });
 
-  // Función para validar la contraseña en tiempo real
   const validatePassword = (pwd: string) => {
     setPasswordChecks({
       minLength: pwd.length >= 6,
@@ -55,7 +49,7 @@ function LoginForm() {
     e.preventDefault();
     setError("");
 
-    // Validaciones previas al login
+    // Validaciones básicas
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
     if (!emailRe.test(email)) {
       const msg = "Por favor ingresa un correo electrónico válido.";
@@ -69,39 +63,39 @@ function LoginForm() {
       alertError("Campo requerido", msg);
       return;
     }
-    if (Object.values(passwordChecks).includes(false)) {
-      const msg = "La contraseña no cumple todos los requisitos.";
-      setError(msg);
-      alertError("Contraseña inválida", msg);
-      return;
-    }
 
     try {
       showLoading("Iniciando sesión...");
       const res = await login(email, password);
 
-      if (res?.success) {
-        // Trae el perfil y llena el contexto
-        const profileRes = await me();
-        const profile = profileRes.user;
+      // Intentos de encontrar el token en diferentes formas de respuesta
+      const token =
+        (res as any)?.accessToken ||
+        (res as any)?.data?.accessToken ||
+        (res as any)?.token ||
+        "";
 
-        setUser(profile);
-        setRole(profile?.rol === "provider" ? "provider" : "user");
-
+      if (!token) {
         closeLoading();
-        toast("Sesión iniciada", "success");
-        navigate("/"); // ajusta si tienes un dashboard específico
-      } else {
-        const msg = "Credenciales inválidas. Intenta nuevamente.";
-        setError(msg);
-        alertError("No pudimos iniciar sesión", msg);
-        closeLoading();
+        await alertError("Login", "No se recibió token de autenticación.");
+        return;
       }
+
+      // Guarda token y refresca el contexto con /auth/me
+      localStorage.setItem("accessToken", token);
+      await refreshMe();
+
+      closeLoading();
+      toast("Sesión iniciada", "success");
+
+      // Enruta al router centralizado por rol
+      navigate("/perfil", { replace: true });
     } catch (err: any) {
       closeLoading();
       const msg =
         err?.userMessage || "No pudimos iniciar sesión. Inténtalo nuevamente.";
       setError(msg);
+      await alertError("Error de inicio de sesión", msg);
     }
   };
 
@@ -132,7 +126,7 @@ function LoginForm() {
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
-              validatePassword(e.target.value);
+              validatePassword(e.target.value); // solo UI
             }}
             fullWidth
             required
@@ -158,7 +152,7 @@ function LoginForm() {
             }}
           />
 
-          {/* Indicadores de validación */}
+          {/* Indicadores visuales (no bloquean login) */}
           <Box className="mt-1 text-sm">
             <Typography color={passwordChecks.minLength ? "green" : "error"}>
               • Al menos 6 caracteres
@@ -187,8 +181,8 @@ function LoginForm() {
             Entrar
           </Button>
 
-          {/* OAuth CLIENTE */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* OAuth CLIENTE (solo Google) */}
+          <div className="grid grid-cols-1 gap-2">
             <Button
               component="a"
               href={auth0RegisterUrl("client", "google-oauth2")}
@@ -202,22 +196,6 @@ function LoginForm() {
                   className="w-5 h-5"
                 />
                 Google
-              </span>
-            </Button>
-
-            <Button
-              component="a"
-              href={auth0RegisterUrl("client", "github")}
-              variant="outlined"
-              color="inherit"
-            >
-              <span className="flex items-center gap-2">
-                <img
-                  src="https://www.svgrepo.com/show/512317/github-142.svg"
-                  alt="GitHub"
-                  className="w-5 h-5"
-                />
-                GitHub
               </span>
             </Button>
           </div>

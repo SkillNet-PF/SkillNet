@@ -88,7 +88,6 @@ export interface ProviderProfile {
   days?: string[]; // normalizado desde CSV
   horarios?: string[]; // normalizado desde CSV
   rating?: number;
-  serviceType?: string; // opcional (solo si el back aún lo expone)
   category?: { categoryId: string; name: string; description?: string };
 }
 

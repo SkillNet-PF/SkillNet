@@ -16,6 +16,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { registerUser } from "../services/clients";
 import { auth0RegisterUrl } from "../services/auth";
+import { login } from "../services/auth";
+import { useAuthContext } from "../contexts/AuthContext";
 
 // SweetAlert2 helpers (tuyos)
 import {
@@ -26,6 +28,7 @@ import {
 } from "../ui/alerts";
 
 function RegisterformUser() {
+  const { refreshMe } = useAuthContext();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -143,7 +146,21 @@ function RegisterformUser() {
         "¡Registro completado!",
         "Tu cuenta de usuario fue creada correctamente."
       );
-      navigate("/DashboardUser"); // respeta tu flujo actual
+
+      // 🔐 Auto-login y carga del perfil
+      try {
+        const loginRes = await login(formData.email, formData.password);
+        if (loginRes?.success) {
+          await refreshMe();
+          navigate("/perfil", { replace: true });
+        } else {
+          sessionStorage.setItem("justRegistered", "1");
+          navigate("/login", { replace: true });
+        }
+      } catch {
+        sessionStorage.setItem("justRegistered", "1");
+        navigate("/login", { replace: true });
+      }
     } catch (err: any) {
       const msg =
         err?.userMessage ||
@@ -157,7 +174,10 @@ function RegisterformUser() {
   };
 
   return (
-    <Paper elevation={8} className="p-8 rounded-2xl shadow-lg max-w-md mx-auto">
+    <Paper
+      elevation={8}
+      className="p-8 rounded-2xl shadow-lg w-full max-w-lg mx-auto"
+    >
       <Box component="form" onSubmit={handleSubmit}>
         <Typography
           variant="h5"
@@ -300,36 +320,22 @@ function RegisterformUser() {
             Registrarse
           </Button>
 
-          {/* Auth por terceros (tuyo) */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          {/* Auth por terceros (solo Google) */}
+          <div className="pt-1">
             <Button
               component="a"
               href={auth0RegisterUrl("client", "google-oauth2")}
               variant="outlined"
               color="inherit"
+              fullWidth
             >
-              <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center gap-2">
                 <img
                   src="https://www.svgrepo.com/show/475656/google-color.svg"
                   alt="Google"
                   className="w-5 h-5"
                 />
                 Continuar con Google
-              </span>
-            </Button>
-            <Button
-              component="a"
-              href={auth0RegisterUrl("client", "github")}
-              variant="outlined"
-              color="inherit"
-            >
-              <span className="flex items-center gap-2">
-                <img
-                  src="https://www.svgrepo.com/show/512317/github-142.svg"
-                  alt="GitHub"
-                  className="w-5 h-5"
-                />
-                Continuar con GitHub
               </span>
             </Button>
           </div>
