@@ -1,3 +1,4 @@
+import React from "react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
@@ -15,11 +16,11 @@ import {
 import { login, auth0RegisterUrl } from "../services/auth";
 import { useAuthContext } from "../contexts/AuthContext";
 
-// SweetAlert2 helpers
+// SweetAlert2 helpers (merge de ambas ramas)
 import { showLoading, closeLoading, alertError, toast } from "../ui/alerts";
 
 function LoginForm() {
-  const { refreshMe } = useAuthContext(); // 👈 usar refreshMe para /auth/me
+  const { refreshMe } = useAuthContext(); // usar /auth/me tras login
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -45,7 +46,7 @@ function LoginForm() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
@@ -54,13 +55,13 @@ function LoginForm() {
     if (!emailRe.test(email)) {
       const msg = "Por favor ingresa un correo electrónico válido.";
       setError(msg);
-      alertError("Correo inválido", msg);
+      await alertError("Correo inválido", msg);
       return;
     }
     if (!password) {
       const msg = "Ingresa tu contraseña.";
       setError(msg);
-      alertError("Campo requerido", msg);
+      await alertError("Campo requerido", msg);
       return;
     }
 

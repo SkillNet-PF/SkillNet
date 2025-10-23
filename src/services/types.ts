@@ -50,14 +50,15 @@ export interface ProviderRegisterRequest {
   address: string;
   phone: string;
   rol: "provider";
-  isActive?: boolean; // opcional por si el back setea default
+  // isActive lo maneja el backend; no enviarlo desde el front
 
-  // específicos
-  about: string; // descripción (antes “bio”)
-  days: string; // CSV: "lunes,martes"
-  horarios: string; // CSV: "09:00,14:00"
-  categoryId?: string; // opcional por compatibilidad (algunos backs usan nombre de categoría)
-  // ❌ Eliminado: serviceType (deriva de la categoría)
+  // Campos específicos de ProviderRegisterDto
+  serviceType?: string;
+  about: string; // Campo correcto (no "bio")
+  days: string; // CSV e.g. "lunes,martes"
+  horarios: string; // CSV e.g. "09:00,14:00"
+  // Backend espera 'category' como nombre; mantenemos categoryId solo para UI
+  category?: string;
 }
 
 /* ============== INTERFACES DE ENTIDADES ============== */

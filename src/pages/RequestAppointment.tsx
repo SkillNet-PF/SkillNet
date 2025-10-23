@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Box, Paper, Stack, TextField, MenuItem, Button, Alert, Typography, Chip, Card, CardContent, CardActionArea, Divider, FormGroup, FormControlLabel, Checkbox, Collapse, Avatar } from "@mui/material";
 import { getAllProviders, ServiceProvider } from "../services/providers";
 import { getCategories, CategoryDto } from "../services/categories";
@@ -9,6 +10,7 @@ import { Dayjs } from "dayjs";
 import "dayjs/locale/es";
 
 export default function RequestAppointment() {
+  const [searchParams] = useSearchParams();
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [error, setError] = useState<string>("");
@@ -30,6 +32,11 @@ export default function RequestAppointment() {
   const [bookedHours, setBookedHours] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState<boolean>(false);
   const [expandedProviderId, setExpandedProviderId] = useState<string | null>(null);
+
+  // Obtener parámetros de URL
+  const providerParam = searchParams.get('provider');
+  const categoryParam = searchParams.get('category');
+  const searchParam = searchParams.get('search');
 
   useEffect(() => {
     async function load() {
@@ -58,6 +65,26 @@ export default function RequestAppointment() {
           // No mostrar error al usuario; solo log para depurar
           console.warn("/categories fallback: derivado desde providers", err);
         }
+
+        // 3) Preseleccionar proveedor si viene en la URL
+        if (providerParam) {
+          const provider = provs.find(p => p.userId === providerParam);
+          if (provider) {
+            setSelectedProvider(provider);
+            setExpandedProviderId(provider.userId);
+          }
+        }
+
+        // 4) Preseleccionar categoría si viene en la URL
+        if (categoryParam) {
+          setFilters(prev => ({ ...prev, category: categoryParam }));
+        }
+
+        // 5) Preseleccionar búsqueda si viene en la URL
+        if (searchParam) {
+          setFilters(prev => ({ ...prev, q: searchParam }));
+        }
+
       } catch (e: any) {
         setError(e?.message || "Error cargando datos");
       } finally {
@@ -65,7 +92,7 @@ export default function RequestAppointment() {
       }
     }
     load();
-  }, []);
+  }, [providerParam, categoryParam, searchParam]);
 
   // Load booked hours when provider or date changes
   useEffect(() => {

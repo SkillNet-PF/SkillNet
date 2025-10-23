@@ -1,8 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
-import { AppBar, Toolbar, Typography, Button, IconButton, Stack, Tooltip, Container } from "@mui/material";
+import { AppBar, Toolbar, Typography, Button, IconButton, Stack, Tooltip, Container, Box } from "@mui/material";
 import { FaUserCircle, FaSignOutAlt, FaMoon, FaSun } from "react-icons/fa";
 import { useAuthContext } from "../contexts/AuthContext";
 import { useThemeMode } from "../ui";
+import SearchBar from "./SearchBar";
 
 function NavbarProvider() {
 
@@ -23,6 +24,11 @@ function NavbarProvider() {
           <Typography component={Link} to="/" variant="h6" color="inherit" sx={{ textDecoration: 'none', fontWeight: 700 }}>
             SkillNet
           </Typography>
+
+          {/* Barra de búsqueda */}
+          <Box sx={{ flex: 1, maxWidth: 400, mx: 2 }}>
+            <SearchBar placeholder="Buscar clientes, categorías..." />
+          </Box>
 
           <Stack direction="row" spacing={2} sx={{ marginLeft: 'auto' }} alignItems="center">
             <Button component={Link} to="/agenda" color="inherit">Mi Agenda</Button>

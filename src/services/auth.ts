@@ -2,7 +2,7 @@ import { http } from "./http";
 import { AuthResponse, toFrontendRole } from "./types";
 
 const API_BASE =
-  (import.meta.env.VITE_API_URL as string) || "http://localhost:3002";
+  (import.meta.env.VITE_API_URL as string) || "/api";
 
 /** ---------- Login / Token ---------- */
 export async function login(

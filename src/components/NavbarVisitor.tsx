@@ -1,8 +1,9 @@
 
 import { Link } from "react-router-dom";
-import { AppBar, Toolbar, Typography, Button, IconButton, Stack, Tooltip, Container } from "@mui/material";
+import { AppBar, Toolbar, Typography, Button, IconButton, Stack, Tooltip, Container, Box } from "@mui/material";
 import { FaMoon, FaSun } from "react-icons/fa";
 import { useThemeMode } from "../ui";
+import SearchBar from "./SearchBar";
 
 function NavbarVisitor() {
    
@@ -22,6 +23,11 @@ function NavbarVisitor() {
                     >
                         SkillNet
                     </Typography>
+
+                    {/* Barra de búsqueda */}
+                    <Box sx={{ flex: 1, maxWidth: 400, mx: 2 }}>
+                        <SearchBar placeholder="Buscar proveedores, categorías..." />
+                    </Box>
 
                     <Stack direction="row" spacing={1.5} sx={{ marginLeft: 'auto' }} alignItems="center">
                         <Button component={Link} to="/login" color="inherit">

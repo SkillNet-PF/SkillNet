@@ -168,7 +168,7 @@ function RegisterformProvider() {
     try {
       showLoading("Creando tu cuenta...");
 
-      // 👇 el back (AuthService.registerProvider) espera 'category' por NOMBRE
+      // El back espera 'category' por NOMBRE
       const payload = {
         name: formData.name,
         email: formData.email,
@@ -178,17 +178,19 @@ function RegisterformProvider() {
         address: formData.address,
         phone: formData.phone,
         rol: "provider",
+        // isActive lo setea el backend
+        // serviceType omitido: lo define la categoría
         about: formData.about,
         days: selectedDays.join(","), // CSV
         horarios: horariosCSV, // CSV
-        category: catName, // ← requerido por el back
+        category: catName, // ← requerido por el back (nombre)
       } as const satisfies import("../services/types").ProviderRegisterRequest & {
         category: string;
       };
 
       const res = await registerProvider(payload as any);
 
-      // si el register no devuelve token, hacemos login
+      // Si el register no devuelve token, hacemos login
       let token =
         (res as any)?.accessToken || (res as any)?.data?.accessToken || "";
       if (!token) {

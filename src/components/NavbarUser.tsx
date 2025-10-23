@@ -9,10 +9,12 @@ import {
   Stack,
   Tooltip,
   Container,
+  Box,
 } from "@mui/material";
 import { FaUserCircle, FaSignOutAlt, FaMoon, FaSun } from "react-icons/fa";
 import { useAuthContext } from "../contexts/AuthContext";
 import { useThemeMode } from "../ui";
+import SearchBar from "./SearchBar";
 
 function NavbarUser() {
   const { logout } = useAuthContext();
@@ -20,9 +22,8 @@ function NavbarUser() {
   const { mode, toggleMode } = useThemeMode();
 
   const handleLogout = () => {
-    // ✅ marca logout intencional y limpia sesión
+    // ✅ limpia sesión y redirige
     logout();
-    // ✅ navega directo a /login (sin Link) y reemplaza el historial
     navigate("/login", { replace: true });
   };
 
@@ -39,6 +40,11 @@ function NavbarUser() {
           >
             SkillNet
           </Typography>
+
+          {/* Barra de búsqueda (aporta de main) */}
+          <Box sx={{ flex: 1, maxWidth: 400, mx: 2 }}>
+            <SearchBar placeholder="Buscar proveedores, categorías..." />
+          </Box>
 
           <Stack
             direction="row"
